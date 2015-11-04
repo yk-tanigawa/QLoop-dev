@@ -189,12 +189,24 @@ int hicFileNames(const char *hicDir,
 		 char **hicFileRaw,
 		 char **hicFileNormalize,
 		 char **hicFileExpected){
-  *hicFileRaw =
-    "../data/GM12878_combined/1kb_resolution_intrachromosomal/chr21/MAPQGE30/chr21_1kb.RAWobserved";
-  *hicFileNormalize = 
-    "../data/GM12878_combined/1kb_resolution_intrachromosomal/chr21/MAPQGE30/chr21_1kb.KRnorm";
-  *hicFileExpected =
-    "../data/GM12878_combined/1kb_resolution_intrachromosomal/chr21/MAPQGE30/chr21_1kb.KRexpected";
+
+  *hicFileRaw = calloc(sizeof(char), 100);
+  *hicFileNormalize = calloc(sizeof(char), 100);
+  *hicFileExpected = calloc(sizeof(char), 100);
+  
+  char fileHead[100];
+  sprintf(fileHead, "%s%s_resolution_intrachromosomal/chr%d/MAPQGE30/chr%d_%s.",
+	  hicDir, res2str(res), chr, chr, res2str(res));
+    
+  sprintf(*hicFileRaw, "%s%s", fileHead, "RAWobserved");
+
+  if(normalize != NULL){
+    sprintf(*hicFileNormalize, "%s%s%s", fileHead, normalize, "norm");
+  }
+
+  if(expected != NULL){
+    sprintf(*hicFileExpected, "%s%s%s", fileHead, expected, "expected");
+  }
 }
 
 int readDouble(const char *fileName, double **array, const int lineNum){
@@ -236,19 +248,20 @@ int hicPrep(const char *hicDir,
 
   char *hicFileNormalize;
   char *hicFileExpected;
-  int i;
 
   hicFileNames(hicDir, res, chr, normalizeMethod, expectedMethod,
 	       hicFileRaw,
 	       &hicFileNormalize,
 	       &hicFileExpected);
 
-  if(hicFileNormalize != NULL){
+  if(normalizeMethod != NULL){
     readDouble(hicFileNormalize, normalize, binNum);
+    free(hicFileNormalize);
   }
 
-  if(hicFileExpected != NULL){
+  if(expectedMethod != NULL){
     readDouble(hicFileExpected, expected, maxDist / res);
+    free(hicFileExpected);
   }
 
   return 0;
@@ -292,7 +305,6 @@ int main(void){
   free(normalize);
   free(expected);
 
-
   for(i = 0; i < binNum; i++){
     if(feature[i] != NULL){
         
@@ -309,8 +321,6 @@ int main(void){
   }
   
   free(feature);
-
-
 
   return 0;
 }
