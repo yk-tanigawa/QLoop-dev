@@ -197,10 +197,12 @@ int hicFileNames(const char *hicDir,
     "../data/GM12878_combined/1kb_resolution_intrachromosomal/chr21/MAPQGE30/chr21_1kb.KRexpected";
 }
 
-int readDouble(const char *fileName, double *array, const int lineNum){
+int readDouble(const char *fileName, double **array, const int lineNum){
   FILE *fp;
   int i = 0;
   char buf[50];
+
+  *array = calloc(sizeof(double), lineNum);
 
   if((fp = fopen(fileName, "r")) == NULL){
     fprintf(stderr, "error: fdopen %s\n%s\n",
@@ -210,7 +212,7 @@ int readDouble(const char *fileName, double *array, const int lineNum){
 
   while(fgets(buf, 50, fp) != NULL){
     if(i < lineNum){
-      array[i++] = strtod(buf, NULL);
+      (*array)[i++] = strtod(buf, NULL);
     }else{
       break;
     }
@@ -219,17 +221,6 @@ int readDouble(const char *fileName, double *array, const int lineNum){
   fclose(fp);
 
   return 0;
-}
-
-int hoge(double *ary, const int len){
-  int i;
-  
-  ary = calloc(sizeof(double), len);
-  for(i = 0; i < len; i++){
-    ary[i] = i;
-  }
-
-  return;
 }
 
 int hicPrep(const char *hicDir, 
@@ -253,22 +244,14 @@ int hicPrep(const char *hicDir,
 	       &hicFileExpected);
 
   if(hicFileNormalize != NULL){
-    *normalize = calloc(sizeof(double), binNum);
-    readDouble(hicFileNormalize, *normalize, binNum);
-  }
-
-  for(i = 0; i < binNum; i++){
-    printf("%f ", (*normalize)[i]);
-    if(i % 5 == 4) printf("\n");
+    readDouble(hicFileNormalize, normalize, binNum);
   }
 
   if(hicFileExpected != NULL){
-    *expected = calloc(sizeof(double), maxDist / res);
-    readDouble(hicFileExpected, *expected, maxDist / res);
+    readDouble(hicFileExpected, expected, maxDist / res);
   }
 
   return 0;
-
 }
 	  
 
@@ -298,31 +281,16 @@ int main(void){
 
   sequencePrep(k, binSize, fastaName, &feature, &binNum);
 
-#if 0
-  hicPrep(hicDir, res, chr, maxDist, binNum,
-	  normalizeMethod, expectedMethod,
-	  &hicFileRaw);
-#endif
-
-#if 1
   hicPrep(hicDir, res, chr, maxDist, binNum,
 	  normalizeMethod, expectedMethod,
 	  &hicFileRaw, &normalize, &expected);
-#endif
 
   printf("%s\n", hicFileRaw);
 
-#if 0
-  for(i = 0; i < binNum; i++){
-    printf("%f ", normalize[i]);
-    if(i % 8 == 0) printf("\n");
-  }
-  printf("\n");
-#endif
 
   /* free the allocated memory and exit */
-  //free(normalize);
-  //free(expected);
+  free(normalize);
+  free(expected);
 
 
   for(i = 0; i < binNum; i++){
