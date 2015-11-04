@@ -197,28 +197,39 @@ int hicFileNames(const char *hicDir,
     "../data/GM12878_combined/1kb_resolution_intrachromosomal/chr21/MAPQGE30/chr21_1kb.KRexpected";
 }
 
-int readDouble(const char *fileName, double **array, const int lineNum){
-  *array = calloc(sizeof(double), lineNum);
+int readDouble(const char *fileName, double *array, const int lineNum){
   FILE *fp;
-  double buf;
   int i = 0;
-  
+  char buf[50];
+
   if((fp = fopen(fileName, "r")) == NULL){
     fprintf(stderr, "error: fdopen %s\n%s\n",
 	    fileName, strerror(errno));
     exit(EXIT_FAILURE);
   }
 
-  while(fscanf(fp, "%lf", &buf) != EOF) {
+  while(fgets(buf, 50, fp) != NULL){
     if(i < lineNum){
-      (*array)[i++] = buf;
+      array[i++] = strtod(buf, NULL);
     }else{
       break;
     }
   }
 
   fclose(fp);
+
   return 0;
+}
+
+int hoge(double *ary, const int len){
+  int i;
+  
+  ary = calloc(sizeof(double), len);
+  for(i = 0; i < len; i++){
+    ary[i] = i;
+  }
+
+  return;
 }
 
 int hicPrep(const char *hicDir, 
@@ -230,20 +241,30 @@ int hicPrep(const char *hicDir,
 	    const char *expectedMethod,
 	    char **hicFileRaw,
 	    double **normalize, 
-	    double **expected){
+	    double **expected){	    
+
   char *hicFileNormalize;
   char *hicFileExpected;
- 
+  int i;
+
   hicFileNames(hicDir, res, chr, normalizeMethod, expectedMethod,
 	       hicFileRaw,
 	       &hicFileNormalize,
 	       &hicFileExpected);
 
   if(hicFileNormalize != NULL){
-    readDouble(hicFileNormalize, normalize, maxDist / res);
+    *normalize = calloc(sizeof(double), binNum);
+    readDouble(hicFileNormalize, *normalize, binNum);
   }
+
+  for(i = 0; i < binNum; i++){
+    printf("%f ", (*normalize)[i]);
+    if(i % 5 == 4) printf("\n");
+  }
+
   if(hicFileExpected != NULL){
-    readDouble(hicFileExpected, expected, binNum);
+    *expected = calloc(sizeof(double), maxDist / res);
+    readDouble(hicFileExpected, *expected, maxDist / res);
   }
 
   return 0;
@@ -277,12 +298,32 @@ int main(void){
 
   sequencePrep(k, binSize, fastaName, &feature, &binNum);
 
+#if 0
+  hicPrep(hicDir, res, chr, maxDist, binNum,
+	  normalizeMethod, expectedMethod,
+	  &hicFileRaw);
+#endif
+
+#if 1
   hicPrep(hicDir, res, chr, maxDist, binNum,
 	  normalizeMethod, expectedMethod,
 	  &hicFileRaw, &normalize, &expected);
+#endif
 
+  printf("%s\n", hicFileRaw);
 
- 
+#if 0
+  for(i = 0; i < binNum; i++){
+    printf("%f ", normalize[i]);
+    if(i % 8 == 0) printf("\n");
+  }
+  printf("\n");
+#endif
+
+  /* free the allocated memory and exit */
+  //free(normalize);
+  //free(expected);
+
 
   for(i = 0; i < binNum; i++){
     if(feature[i] != NULL){
@@ -300,6 +341,8 @@ int main(void){
   }
   
   free(feature);
+
+
 
   return 0;
 }
