@@ -2,10 +2,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+#include <math.h>
 
 /* genomic sequence */
 
@@ -142,7 +143,11 @@ int sequencePrep(const int k,
   long fileSize;
 
 #if DEBUG
-  char *dump = calloc(sizeof(char), 1001);
+  if((char *dump = calloc(sizeof(char), 1001)) == NULL){
+    perror("error(calloc) debug func");
+    exit(EXIT_FAILURE);
+  }
+
 #endif
 
   /* allocate memory space for sequence */
@@ -190,9 +195,18 @@ int hicFileNames(const char *hicDir,
 		 char **hicFileNormalize,
 		 char **hicFileExpected){
 
-  *hicFileRaw = calloc(sizeof(char), 100);
-  *hicFileNormalize = calloc(sizeof(char), 100);
-  *hicFileExpected = calloc(sizeof(char), 100);
+  if((*hicFileRaw = calloc(sizeof(char), 100)) == NULL){
+    perror("error(calloc) hicFileRaw");
+    exit(EXIT_FAILURE);
+  }
+  if((*hicFileNormalize = calloc(sizeof(char), 100)) == NULL){
+    perror("error(calloc) hicFileNormalize");
+    exit(EXIT_FAILURE);
+  }
+  if((*hicFileExpected = calloc(sizeof(char), 100)) == NULL){
+    perror("error(calloc) hicFileExpected");
+    exit(EXIT_FAILURE);
+  }
   
   char fileHead[100];
   sprintf(fileHead, "%s%s_resolution_intrachromosomal/chr%d/MAPQGE30/chr%d_%s.",
@@ -214,10 +228,14 @@ int readDouble(const char *fileName, double **array, const int lineNum){
   int i = 0;
   char buf[50];
 
-  *array = calloc(sizeof(double), lineNum);
+
+  if((*array = calloc(sizeof(double), lineNum)) == NULL){
+    perror("error(calloc) readDouble");
+    exit(EXIT_FAILURE);
+  }
 
   if((fp = fopen(fileName, "r")) == NULL){
-    fprintf(stderr, "error: fdopen %s\n%s\n",
+    fprintf(stderr, "error: fopen %s\n%s\n",
 	    fileName, strerror(errno));
     exit(EXIT_FAILURE);
   }
@@ -267,11 +285,125 @@ int hicPrep(const char *hicDir,
   return 0;
 }
 	  
+/* main */
+
+int computeParamsNormExp(const int k, 
+			 const int res,
+			 const int minBinDist,
+			 const int maxBinDist,
+			 const int **feature, 
+			 const char *hicFileRaw, 
+			 const double *normalize,
+			 const double *expected){
+  FILE *fp;
+  char buf[100], mijbuf[20];
+  int i, j, l, m, n;
+  double mij;
+
+  double *P, *q, *dij;
+  long Psize = (1 << (8 * k - 1)) + (1 << (4 * k - 1));
+  long qsize = 1 << (4 * k);
+  long fsize = 1 << (2 * k);
+  double Pcoef = 1.0 / ((res + k - 1) * (res + k - 1));
+
+  /* Hi-C file open */
+  if((fp = fopen(hicFileRaw, "r")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    hicFileRaw, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  /* memory allocation */
+  if((P = calloc(sizeof(double), Psize)) == NULL){
+    perror("error(calloc) P");
+    exit(EXIT_FAILURE);
+  }
+
+  if((q = calloc(sizeof(double), qsize)) == NULL){
+    perror("error(calloc) P");
+    exit(EXIT_FAILURE);
+  }
+
+  if((dij = calloc(sizeof(double), qsize)) == NULL){
+    perror("error(calloc) dij");
+    exit(EXIT_FAILURE);
+  }
+
+  while(fgets(buf, 100, fp) != NULL){
+    sscanf(buf, "%d\t%d\t%s", &i, &j, &mijbuf);
+    i /= res;
+    j /= res;
+    if(minBinDist <= abs(i - j) && 
+       abs(i - j) <= maxBinDist &&
+       feature[i] != NULL &&
+       feature[j] != NULL){
+      mij = strtod(mijbuf, NULL) / (normalize[i] * normalize[j] * expected[abs(i - j)]);
+      if(!isnan(mij) && !isinf(mij)){
+	printf("%d %d %.20f\n", i, j, mij);
+	/* compute dij */
+	for(m = 0; m < fsize; m++){
+	  for(l = 0; l < fsize; l++){
+	    dij[m * fsize + l] = feature[j][m] * feature[i][l];
+	  }
+	}
+
+	#if 0
+	for(m = 0; m < qsize; m++){
+	  printf("%d ", dij[m]);
+	}
+	printf("\n");
+	#endif
+
+	/* add to q */
+	for(m = 0; m < qsize; m++){
+	  q[m] += mij * dij[m];
+	}
+	
+	#if 0
+	for(m = 0; m < qsize; m++){
+	  printf("%f ", q[m]);
+	}
+	printf("\n");
+	#endif
+
+	n = 0; /* n is an index for P */
+	for(m = 0; m < qsize; m++){
+	  for(l = m; l < qsize; l++){
+	    P[n++] += Pcoef * dij[m] * dij[l];
+	  }
+	}
+
+      }
+    }
+  }
+
+  printf("\n");
+
+
+  for(m = 0; m < qsize; m++){
+    printf("%f ", q[m]);
+  }
+  printf("\n");
+  printf("\n");
+  for(m = 0; m < Psize; m++){
+    printf("%f ", P[m]);
+  }
+  printf("\n");
+
+
+  fclose(fp);
+
+
+  free(P);
+  free(q);
+}
+
+
 
 int main(void){
   char *fastaName = "../data/GRCh37.ch21.fasta";
   char *hicDir = "../data/GM12878_combined/";
-  int k = 5;
+  int k = 1;
   int binSize = 1000;
   int res = 1000;
   int chr = 21;
@@ -297,6 +429,9 @@ int main(void){
   hicPrep(hicDir, res, chr, maxDist, binNum,
 	  normalizeMethod, expectedMethod,
 	  &hicFileRaw, &normalize, &expected);
+
+  computeParamsNormExp(k, res, minDist / res, maxDist / res, 
+		       (const int **)feature, hicFileRaw, normalize, expected);
 
   printf("%s\n", hicFileRaw);
 
