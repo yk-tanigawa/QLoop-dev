@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <getopt.h>
 
 #define BENCH 1
 
@@ -262,7 +263,7 @@ int readDouble(const char *fileName, double **array, const int lineNum){
 int hicPrep(const char *hicDir, 
 	    const int res, 
 	    const int chr, 
-	    const int maxDist,
+	    const long maxDist,
 	    const int binNum,
 	    const char *normalizeMethod,
 	    const char *expectedMethod,
@@ -296,8 +297,8 @@ int hicPrep(const char *hicDir,
 int computeParamsNormExp(const int k, 
 			 const int chr,
 			 const int res,
-			 const int minBinDist,
-			 const int maxBinDist,
+			 const long minBinDist,
+			 const long maxBinDist,
 			 const int **feature, 
 			 const char *hicFileRaw, 
 			 const double *normalize,
@@ -466,28 +467,26 @@ int save2file(const char *fileName,
   return 0;
 }
 
-int main(int argc, char **argv){
-  char *fastaName = "../data/GRCh37.ch21.fasta";
-  char *hicDir = "../data/GM12878_combined/";
-  char *outDir = "../out/";
-  int k = 1;
-  int binSize = 1000;
-  int res = 1000;
-  int chr = 21;
-  int minDist = 10000;
-  int maxDist = 1000000;
-  char *normalizeMethod = "KR";
-  char *expectedMethod = "KR";
+int main_sub(const char *fastaName,
+	     const char *hicDir,
+	     const char *outDir,
+	     const int k,
+	     const int res,
+	     const int chr,
+	     const long minDist,
+	     const long maxDist,
+	     const char *normalizeMethod,
+	     const char *expectedMethod){
 
   int **feature;
   char *hicFileRaw;
   double *normalize;
   double *expected;
   int binNum;
-
   int i;
+  //const int binSize = res;
 
-  sequencePrep(k, binSize, fastaName, &feature, &binNum);
+  sequencePrep(k, res, fastaName, &feature, &binNum);
 
   hicPrep(hicDir, res, chr, maxDist, binNum,
 	  normalizeMethod, expectedMethod,
@@ -507,6 +506,158 @@ int main(int argc, char **argv){
   }
   
   free(feature);
+
+  return 0;
+}
+
+int check_params(const char *fastaName,
+		 const char *hicDir,
+		 const char *outDir,
+		 const int k,
+		 const int res,
+		 const int chr,
+		 const long minDist,
+		 const long maxDist,
+		 const char *normalizeMethod,
+		 const char *expectedMethod){
+  if(fastaName == NULL){
+    fprintf(stderr, "input fasta file is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("fasta file:    %s\n", fastaName);
+  }
+  if(hicDir == NULL){
+    fprintf(stderr, "Hi-C data directory is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("Hi-C data dir: %s\n", hicDir);
+  }
+  if(outDir == NULL){
+    fprintf(stderr, "output directory is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("Output dir:    %s\n", outDir);
+  }
+  if(k == -1){
+    fprintf(stderr, "k is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("k: %d\n", k);
+  }
+  if(res == -1){
+    fprintf(stderr, "resolution is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("resolution: %d\n", res);
+  }
+  if(chr == -1){
+    fprintf(stderr, "chromosome number is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("chromosome: %d\n", chr);
+  }
+  if(minDist == -1){
+    fprintf(stderr, "minimum distance is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("min distance: %d\n", minDist);
+  }
+  if(maxDist == -1){
+    fprintf(stderr, "maximum distance is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("Max distance: %d\n", maxDist);
+  }
+  if(normalizeMethod == NULL){
+    fprintf(stderr, "warning: normalize method is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("Normalization: %s\n", normalizeMethod);
+  }
+  if(expectedMethod == NULL){
+    fprintf(stderr, "warning: expected value calculation method is not specified\n");
+    exit(EXIT_FAILURE);
+  }else{
+    printf("Expectation:   %s\n", expectedMethod);
+  }
+  return 0;
+}
+
+int main(int argc, char **argv){
+  char *fastaName = NULL; //"../data/GRCh37.ch21.fasta";
+  char *hicDir = NULL; //"../data/GM12878_combined/";
+  char *outDir = NULL; //"../out/";
+  int k = -1; //1
+  int res = -1; //1000;
+  int chr = -1; //21;
+  long minDist = -1; //10000;
+  long maxDist = -1; //1000000;
+  char *normalizeMethod = NULL; //"KR";
+  char *expectedMethod = NULL; //"KR";
+
+  struct option long_opts[] = {
+    {"help", no_argument, NULL, 'h'},
+    {"version", no_argument, NULL, 'v'},
+    /* options */
+    {"fasta", required_argument, NULL, 'f'},
+    {"hic", required_argument, NULL, 'H'},
+    {"out", required_argument, NULL, 'o'},
+    {"k", required_argument, NULL, 'k'},
+    {"res", required_argument, NULL, 'r'},
+    {"chr", required_argument, NULL, 'c'},
+    {"min", required_argument, NULL, 'm'},
+    {"max", required_argument, NULL, 'M'},
+    {"norm", required_argument, NULL, 'n'},
+    {"expected", required_argument, NULL, 'e'},
+    {0, 0, 0, 0}
+  };
+
+  int opt = 0;
+  int opt_idx = 0;
+
+  while((opt = getopt_long(argc, argv, "hvf:H:o:k:r:c:m:M:n:e:", long_opts, &opt_idx)) != -1){
+    switch (opt){
+      case 'h': /* help */
+	printf("usage:\n");
+	break;
+      case 'v': /* version*/
+	printf("version: 0.10\n");
+	break;
+      case 'f': /* fasta */
+	fastaName = optarg;
+	break;
+      case 'H': /* hic */
+	hicDir = optarg;
+	break;
+      case 'o': /* out */
+	outDir = optarg;
+	break;
+      case 'k': /* k */
+	k = atoi(optarg);
+	break;
+      case 'r': /* res */
+	res = atoi(optarg);
+	break;
+      case 'c': /* chr */
+	chr = atoi(optarg);
+	break;
+      case 'm': /* min */
+	minDist = atol(optarg);
+	break;
+      case 'M': /* max */
+	maxDist = atol(optarg);
+	break;
+      case 'n': /* norm */
+	normalizeMethod = optarg;
+	break;
+      case 'e': /* expected */
+	expectedMethod = optarg;
+	break;
+    }
+  }
+
+  check_params(fastaName, hicDir, outDir, k, res, chr, minDist, maxDist, normalizeMethod, expectedMethod);
+  main_sub(fastaName, hicDir, outDir, k, res, chr, minDist, maxDist, normalizeMethod, expectedMethod);
 
   return 0;
 }
