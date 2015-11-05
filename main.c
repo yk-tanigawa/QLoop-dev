@@ -8,6 +8,25 @@
 #include <string.h>
 #include <math.h>
 
+#define BENCH 1
+
+#if BENCH
+
+#include <sys/time.h>
+
+int dumpResults(struct timeval *t, long *l){
+  time_t diff_sec = (t[1].tv_sec - t[0].tv_sec);
+  suseconds_t diff_usec = (t[1].tv_usec - t[0].tv_usec);
+  double diff = (double)diff_sec + ((double)diff_usec / 1000000);
+  printf("# of data points : \t%d of %d\n", l[1], l[0]);
+  printf("computation time : \t%.6f [sec.]\n", diff);
+  printf("time per data point: \t%e [sec. / data point]\n", diff / l[1]);
+  return 0;
+}
+
+#endif
+
+
 /* genomic sequence */
 
 long getFileSize(const char *fname){
@@ -47,8 +66,8 @@ int readFasta(const char *fastaName,
 
   /* get sequence header */
   fscanf(fp, "%s", sequenceHead);
-
  
+  /* get sequence body */
   while(fscanf(fp, "%s", buf) != EOF) {
     strncpy(sequence, buf, strlen(buf));
     sequence += strlen(buf);
@@ -285,15 +304,19 @@ int computeParamsNormExp(const int k,
 			 const double *expected,
 			 const char*outDir){
   FILE *fp;
-  char buf[100], mijbuf[20];
   int i, j, l, m, n;
   double mij;
   double *P, *q, *dij;
+  char *outFileP, *outFileq;
+  char buf[100], mijbuf[20];
+#if BENCH
+  struct timeval tv[2];
+  long benchLines[2];
+#endif
   const long Psize = (1 << (8 * k - 1)) + (1 << (4 * k - 1));
   const long qsize = 1 << (4 * k);
   const long fsize = 1 << (2 * k);
   const double Pcoef = 1.0 / ((res + k - 1) * (res + k - 1));
-  char *outFileP, *outFileq;
 
   /* Hi-C file open */
   if((fp = fopen(hicFileRaw, "r")) == NULL){
@@ -318,7 +341,25 @@ int computeParamsNormExp(const int k,
     exit(EXIT_FAILURE);
   }
 
+
+  printf("Hi-C file %s is open\n", hicFileRaw);
+
+#if BENCH
+  benchLines[0] = benchLines[1] = 0;
+  if(gettimeofday(&(tv[0]), NULL) == -1){
+    perror("gettimeofday");
+    exit(EXIT_FAILURE);
+  }
+#endif
+
+  /* compute P and q */
+
   while(fgets(buf, 100, fp) != NULL){
+
+#if BENCH
+    benchLines[0]++;
+#endif
+
     sscanf(buf, "%d\t%d\t%s", &i, &j, &mijbuf);
     i /= res;
     j /= res;
@@ -331,6 +372,11 @@ int computeParamsNormExp(const int k,
       mij = strtod(mijbuf, NULL) / (normalize[i] * normalize[j] * expected[abs(i - j)]);
 
       if(!isnan(mij) && !isinf(mij)){
+
+#if BENCH
+	benchLines[1]++;
+#endif
+
 	/* compute dij */
 	for(m = 0; m < fsize; m++){
 	  for(l = 0; l < fsize; l++){
@@ -354,18 +400,34 @@ int computeParamsNormExp(const int k,
     }
   }
 
+#if BENCH
+  if(gettimeofday(&(tv[1]), NULL) == -1){
+    perror("gettimeofday");
+    exit(EXIT_FAILURE);
+  }
+#endif
+
   fclose(fp);
 
   setOutFileName(outDir, res, chr, k, &outFileP, &outFileq);
+
+  printf("Writing P to %s\n", outFileP);
+  printf("Writing q to %s\n", outFileq);
+
   save2file(outFileP, P, Psize);
   save2file(outFileq, q, qsize);
 
   free(outFileP);
   free(outFileq);
   
-
   free(P);
   free(q);
+
+#if BENCH
+  dumpResults(tv, benchLines);
+#endif
+
+  return 0;
 }
 
 int setOutFileName(const char *outDir,
@@ -404,8 +466,7 @@ int save2file(const char *fileName,
   return 0;
 }
 
-
-int main(void){
+int main(int argc, char **argv){
   char *fastaName = "../data/GRCh37.ch21.fasta";
   char *hicDir = "../data/GM12878_combined/";
   char *outDir = "../out/";
@@ -449,6 +510,3 @@ int main(void){
 
   return 0;
 }
-
-#define DEBUG 0
-
