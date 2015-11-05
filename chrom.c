@@ -22,6 +22,7 @@ int dumpResults(struct timeval *t, long *l){
   printf("# of data points : \t%ld of %ld\n", l[1], l[0]);
   printf("computation time : \t%.6f [sec.]\n", diff);
   printf("time per data point: \t%e [sec. / data point]\n", diff / l[1]);
+  printf("time per whole data: \t%e [sec. / lines]\n", diff / l[0]);
   return 0;
 }
 
