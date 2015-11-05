@@ -19,7 +19,7 @@ int dumpResults(struct timeval *t, long *l){
   time_t diff_sec = (t[1].tv_sec - t[0].tv_sec);
   suseconds_t diff_usec = (t[1].tv_usec - t[0].tv_usec);
   double diff = (double)diff_sec + ((double)diff_usec / 1000000);
-  printf("# of data points : \t%d of %d\n", l[1], l[0]);
+  printf("# of data points : \t%ld of %ld\n", l[1], l[0]);
   printf("computation time : \t%.6f [sec.]\n", diff);
   printf("time per data point: \t%e [sec. / data point]\n", diff / l[1]);
   return 0;
@@ -56,7 +56,6 @@ int readFasta(const char *fastaName,
 	      char *sequence){
   FILE *fp;
   char buf[256];
-  struct stat stbuf;
 
   /* file open */
   if((fp = fopen(fastaName, "r")) == NULL){
@@ -172,8 +171,8 @@ int sequencePrep(const int k,
   
   readFasta(fastaName, sequenceHead, sequence);	    
 	    
-  printf("loaded genome sequence %s (length = %d)\n",
-	 sequenceHead, strlen(sequence));
+  printf("loaded genome sequence %s (length = %ld)\n",
+	 sequenceHead, (long)strlen(sequence));
 
   computeFeature(k, binSize, sequence, feature, binNum);
 
@@ -229,6 +228,8 @@ int hicFileNames(const char *hicDir,
   if(expected != NULL){
     sprintf(*hicFileExpected, "%s%s%s", fileHead, expected, "expected");
   }
+
+  return 0;
 }
 
 int readDouble(const char *fileName, double **array, const int lineNum){
@@ -288,6 +289,42 @@ int hicPrep(const char *hicDir,
     readDouble(hicFileExpected, expected, maxDist / res);
     free(hicFileExpected);
   }
+
+  return 0;
+}
+
+int setOutFileName(const char *outDir,
+		   const int res,
+		   const int chr,
+		   const int k,		   
+		   char **outFileP,
+		   char **outFileq){
+  *outFileP = calloc(sizeof(char), 100);
+  *outFileq = calloc(sizeof(char), 100);
+  sprintf(*outFileP, "%sres%d.chr%d.k%d.P.out", outDir, res, chr, k);
+  sprintf(*outFileq, "%sres%d.chr%d.k%d.q.out", outDir, res, chr, k);
+  return 0;
+}
+
+int save2file(const char *fileName,
+	      const double *ary,
+	      const long length){
+  FILE *fp;
+  long i = 0;
+
+  if((fp = fopen(fileName, "w")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    fileName, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  fprintf(fp, "%ld\n", length);
+
+  for(i = 0; i < length; i++){
+    fprintf(fp, "%e\n", ary[i]);
+  }
+  
+  fclose(fp);
 
   return 0;
 }
@@ -361,7 +398,7 @@ int computeParamsNormExp(const int k,
     benchLines[0]++;
 #endif
 
-    sscanf(buf, "%d\t%d\t%s", &i, &j, &mijbuf);
+    sscanf(buf, "%d\t%d\t%s", &i, &j, (char *)(&mijbuf));
     i /= res;
     j /= res;
     if(minBinDist <= abs(i - j) && 
@@ -427,42 +464,6 @@ int computeParamsNormExp(const int k,
 #if BENCH
   dumpResults(tv, benchLines);
 #endif
-
-  return 0;
-}
-
-int setOutFileName(const char *outDir,
-		   const int res,
-		   const int chr,
-		   const int k,		   
-		   char **outFileP,
-		   char **outFileq){
-  *outFileP = calloc(sizeof(char), 100);
-  *outFileq = calloc(sizeof(char), 100);
-  sprintf(*outFileP, "%sres%d.chr%d.k%d.P.out", outDir, res, chr, k);
-  sprintf(*outFileq, "%sres%d.chr%d.k%d.q.out", outDir, res, chr, k);
-  return 0;
-}
-
-int save2file(const char *fileName,
-	      const double *ary,
-	      const long length){
-  FILE *fp;
-  long i = 0;
-
-  if((fp = fopen(fileName, "w")) == NULL){
-    fprintf(stderr, "error: fopen %s\n%s\n",
-	    fileName, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-
-  fprintf(fp, "%d\n", length);
-
-  for(i = 0; i < length; i++){
-    fprintf(fp, "%e\n", ary[i]);
-  }
-  
-  fclose(fp);
 
   return 0;
 }
@@ -559,13 +560,13 @@ int check_params(const char *fastaName,
     fprintf(stderr, "minimum distance is not specified\n");
     exit(EXIT_FAILURE);
   }else{
-    printf("min distance: %d\n", minDist);
+    printf("min distance: %ld\n", minDist);
   }
   if(maxDist == -1){
     fprintf(stderr, "maximum distance is not specified\n");
     exit(EXIT_FAILURE);
   }else{
-    printf("Max distance: %d\n", maxDist);
+    printf("Max distance: %ld\n", maxDist);
   }
   if(normalizeMethod == NULL){
     fprintf(stderr, "warning: normalize method is not specified\n");
@@ -618,7 +619,7 @@ int main(int argc, char **argv){
     switch (opt){
       case 'h': /* help */
 	printf("usage:\n\n");
-	printf("example: ./a.out -f ../data/GRCh37.ch21.fasta -H ../data/GM12878_combined/ -o ../out/ -k1 -r1000 -c21 -m10000 -M1000000 -n\"KR\" -e\"KR\"\n");
+	printf("example: ./chrom -f ../data/GRCh37.ch21.fasta -H ../data/GM12878_combined/ -o ../out/ -k1 -r1000 -c21 -m10000 -M1000000 -n\"KR\" -e\"KR\"\n");
 	exit(EXIT_SUCCESS);
       case 'v': /* version*/
 	printf("version: 0.10\n");
