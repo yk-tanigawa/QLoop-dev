@@ -484,7 +484,6 @@ int main_sub(const char *fastaName,
   double *expected;
   int binNum;
   int i;
-  //const int binSize = res;
 
   sequencePrep(k, res, fastaName, &feature, &binNum);
 
@@ -618,11 +617,12 @@ int main(int argc, char **argv){
   while((opt = getopt_long(argc, argv, "hvf:H:o:k:r:c:m:M:n:e:", long_opts, &opt_idx)) != -1){
     switch (opt){
       case 'h': /* help */
-	printf("usage:\n");
-	break;
+	printf("usage:\n\n");
+	printf("example: ./a.out -f ../data/GRCh37.ch21.fasta -H ../data/GM12878_combined/ -o ../out/ -k1 -r1000 -c21 -m10000 -M1000000 -n\"KR\" -e\"KR\"\n");
+	exit(EXIT_SUCCESS);
       case 'v': /* version*/
 	printf("version: 0.10\n");
-	break;
+	exit(EXIT_SUCCESS);
       case 'f': /* fasta */
 	fastaName = optarg;
 	break;
