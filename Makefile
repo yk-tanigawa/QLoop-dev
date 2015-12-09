@@ -9,7 +9,10 @@ EXEC = $(SRCS:.c=)
 RM = rm -f
 
 
-all: chrom
+all: prep
+
+prep: prep.o
+	$(LD) $(LDFLAGS) -o $@ $^
 
 chrom: chrom.o
 	$(LD) $(LDFLAGS) -o $@ $^
