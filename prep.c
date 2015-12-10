@@ -294,6 +294,8 @@ int hicNormPrep(const char *hicDir,
   return 0;
 }
 
+#if 0
+
 int setOutFileName(const char *outDir,
 		   const int res,
 		   const int chr,
@@ -469,6 +471,108 @@ int computeParamsNormExp(const int k,
   return 0;
 }
 
+#endif
+
+/* normalize Hi-C data */
+
+int HicPrep(const int k, 
+	    const int chr,
+	    const int res,
+	    const long minBinDist,
+	    const long maxBinDist,
+	    const int **feature, 
+	    const char *hicFileRaw, 
+	    const double *normalize,
+	    const double *expected,
+	    const char*outDir){
+  FILE *fp, *fpOut;
+  int i, j;
+  double mij;
+  char buf[100], mijbuf[20], outFile[100];
+
+#if BENCH
+  struct timeval tv[2];
+  long benchLines[2];
+#endif
+
+  /* Hi-C input file open */
+  if((fp = fopen(hicFileRaw, "r")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    hicFileRaw, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  printf("Hi-C file %s is open\n", hicFileRaw);
+
+  /* Hi-C output file open */
+  sprintf(outFile, "%shic.dat", outDir);
+
+  if((fpOut = fopen(outFile, "w")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    outFile, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  printf("Hi-C data file created : %s \n", outFile);
+
+#if BENCH
+  benchLines[0] = benchLines[1] = 0;
+  if(gettimeofday(&(tv[0]), NULL) == -1){
+    perror("gettimeofday");
+    exit(EXIT_FAILURE);
+  }
+#endif
+
+  /* normalize Hi-C data */
+  while(fgets(buf, 100, fp) != NULL){
+
+#if BENCH
+    benchLines[0]++;
+#endif
+
+    sscanf(buf, "%d\t%d\t%s", &i, &j, (char *)(&mijbuf));
+    i /= res;
+    j /= res;
+    if(minBinDist <= abs(i - j) && 
+       abs(i - j) <= maxBinDist &&
+       feature[i] != NULL &&
+       feature[j] != NULL){
+
+      /* normalize & O/E conversion */
+      mij = strtod(mijbuf, NULL) / (normalize[i] * normalize[j] * expected[abs(i - j)]);
+
+      if(!isnan(mij) && !isinf(mij)){
+
+#if BENCH
+	benchLines[1]++;
+#endif
+	
+	fprintf(fpOut, "%d\t%d\t%f\n", i * res, j * res, mij);
+
+      }
+    }
+  }
+
+#if BENCH
+  if(gettimeofday(&(tv[1]), NULL) == -1){
+    perror("gettimeofday");
+    exit(EXIT_FAILURE);
+  }
+#endif
+
+  fclose(fpOut);
+  fclose(fp);
+
+
+#if BENCH
+  dumpResults(tv, benchLines);
+#endif
+
+
+  return 0;
+}
+
+
 int main_sub(const char *fastaName,
 	     const char *hicDir,
 	     const char *outDir,
@@ -495,8 +599,14 @@ int main_sub(const char *fastaName,
 	      normalizeMethod, expectedMethod,
 	      &hicFileRaw, &normalize, &expected);
 
-  computeParamsNormExp(k, chr, res, minDist / res, maxDist / res, 
-		       (const int **)feature, hicFileRaw, normalize, expected, outDir);
+  /* normalize Hi-C data and write it into a file */
+  HicPrep(k, chr, res, 
+	  minDist / res, maxDist / res, 
+	  (const int **)feature, hicFileRaw, 
+	  normalize, expected, outDir);
+
+  /* write feature vector */
+
 
   /* free the allocated memory and exit */
   free(normalize);
