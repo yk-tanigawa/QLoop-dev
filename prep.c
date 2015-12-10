@@ -572,6 +572,45 @@ int HicPrep(const int k,
   return 0;
 }
 
+int featureSave(const char *outDir,
+		const int k,
+		const int res,
+		const int chr,
+		const int binNum,
+		const int **feature){
+  FILE *fp;
+  long i, j, jMax;
+  char fileName[100];
+
+  jMax = (1 << (2 * k));
+
+  sprintf(fileName, "%sk%d.res%d.chr%d.dat",
+	  outDir, k, res, chr);
+
+
+  if((fp = fopen(fileName, "w")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    fileName, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  for(i = 0; i < binNum; i++){
+    if(feature[i] == NULL){
+      fprintf(fp, "*\n");
+    }else{
+      for(j = 0; j < jMax; j++){
+	fprintf(fp, "%d\t", feature[i][j]);
+      }
+      fprintf(fp, "\n");
+    }
+  }
+  
+  fclose(fp);
+
+  return 0;
+}
+
+
 
 int main_sub(const char *fastaName,
 	     const char *hicDir,
@@ -606,6 +645,7 @@ int main_sub(const char *fastaName,
 	  normalize, expected, outDir);
 
   /* write feature vector */
+  featureSave(outDir, k, res, chr, binNum, (const int **)feature);
 
 
   /* free the allocated memory and exit */
