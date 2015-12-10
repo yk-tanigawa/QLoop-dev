@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+
+@data = <>;
+
+foreach(@data){ chomp; }
+
+sub by_number {
+    if( $a < $b) { -1 } elsif ($a > $b) { 1 } else { 0 }
+}
+
+@data = sort by_number @data;
+
+for((1..10)){
+    my $frac = 0.1 * $_;
+    print "$frac\t";
+    print "$data[$frac * $#data]\n";
+}
