@@ -9,10 +9,14 @@ EXEC = $(SRCS:.c=)
 RM = rm -f
 
 
-all: prep
+all: prep mkLibsvmFile
 
 prep: prep.o
 	$(LD) $(LDFLAGS) -o $@ $^
+
+mkLibsvmFile: mkLibsvmFile.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 
 chrom: chrom.o
 	$(LD) $(LDFLAGS) -o $@ $^
