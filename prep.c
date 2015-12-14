@@ -297,8 +297,10 @@ int hicNormPrep(const char *hicDir,
 /* normalize Hi-C data */
 
 int HicPrep(const int k, 
-	    const int chr,
 	    const int res,
+	    const int chr,
+	    const char *normalizeMethod,
+	    const char *expectedMethod,
 	    const long minBinDist,
 	    const long maxBinDist,
 	    const int **feature, 
@@ -326,7 +328,11 @@ int HicPrep(const int k,
   printf("Hi-C file %s is open\n", hicFileRaw);
 
   /* Hi-C output file open */
-  sprintf(outFile, "%shic.dat", outDir);
+  sprintf(outFile, 
+	  "%schr%d.m%ld.M%ld.%s.%s.dat", 
+	  outDir, chr,
+	  minBinDist * res, maxBinDist * res,
+	  normalizeMethod, expectedMethod);
 
   if((fpOut = fopen(outFile, "w")) == NULL){
     fprintf(stderr, "error: fopen %s\n%s\n",
@@ -460,7 +466,7 @@ int main_sub(const char *fastaName,
 	      &hicFileRaw, &normalize, &expected);
 
   /* normalize Hi-C data and write it into a file */
-  HicPrep(k, chr, res, 
+  HicPrep(k, res, chr, normalizeMethod, expectedMethod,
 	  minDist / res, maxDist / res, 
 	  (const int **)feature, hicFileRaw, 
 	  normalize, expected, outDir);

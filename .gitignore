@@ -2,3 +2,5 @@
 a.out
 *.dat
 *.libsvm
+data
+data/*

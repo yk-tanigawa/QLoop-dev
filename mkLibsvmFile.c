@@ -100,7 +100,7 @@ int main_sub(const char *freqFile,
   long l, m;  /* index for k-mers */
   long z;
 
-  sprintf(outFile, "%s.libsvm", hicFile);
+  sprintf(outFile, "%s.k%d.t%f.libsvm", hicFile, k, threshold);
 
   readFeature(freqFile, k, &feature, &featureLen);
   //fprintf(stderr, "%ld\n", featureLen);
