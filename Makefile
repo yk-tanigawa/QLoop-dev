@@ -9,12 +9,12 @@ EXEC = $(SRCS:.c=)
 RM = rm -f
 
 
-all: prep mkLibsvmFile
+all: prep kmerFreqOdds
 
 prep: prep.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
-mkLibsvmFile: mkLibsvmFile.o
+kmerFreqOdds: kmerFreqOdds.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 
