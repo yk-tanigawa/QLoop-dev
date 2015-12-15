@@ -32,7 +32,6 @@ long wc(const char *fName){
   return lines;
 }
 
-
 int readFeature(const char *freqFile,
 		const int k,
 		int ***feature,
@@ -93,28 +92,29 @@ int main_sub(const char *freqFile,
 	     const char *outDir){
   FILE *fpin, *fpout;
   int **feature;
+  const unsigned long pairFeatureDim = 1 << (4 * k);
   const unsigned long featureDim = 1 << (2 * k);
   unsigned long featureLen, hicLine = 0, hicHigh = 0;
   unsigned long *freqBackGround, *freqHighContact;
   char outFile[F_NAME_LEN], buf[BUF_SIZE], mijbuf[128];
   double mij;
   int i, j;   /* index for genomic bins */
-  long m;  /* index for k-mers */
+  long l, m;  /* index for k-mers */
 
 
-  if((freqBackGround = calloc(sizeof(unsigned long), featureDim)) == NULL){
+  if((freqBackGround = calloc(sizeof(unsigned long), pairFeatureDim)) == NULL){
     fprintf(stderr, "error(calloc) freqBase\n%s\n",
 	    strerror(errno));
     exit(EXIT_FAILURE);
   }
 
-  if((freqHighContact = calloc(sizeof(unsigned long), featureDim)) == NULL){
+  if((freqHighContact = calloc(sizeof(unsigned long), pairFeatureDim)) == NULL){
     fprintf(stderr, "error(calloc) HiContact\n%s\n",
 	    strerror(errno));
     exit(EXIT_FAILURE);
   }
 
-  sprintf(outFile, "%s.k%d.t%f.kmerodds", hicFile, k, threshold);
+  sprintf(outFile, "%s.k%d.t%f.kmerPairOdds", hicFile, k, threshold);
 
   readFeature(freqFile, k, &feature, &featureLen);
   //fprintf(stderr, "%ld\n", featureLen);
@@ -133,25 +133,29 @@ int main_sub(const char *freqFile,
 
     if(feature[i] != NULL && feature[j] != NULL){
       if(mij >= threshold){
-	for(m = 0; m < featureDim; m++){
-	  freqHighContact[m] += feature[i][m];
-	  freqBackGround[m] += feature[i][m];
+	for(l = 0; l < featureDim; l++){
+	  for(m = 0; m < featureDim; m++){
+	    freqHighContact[l * featureDim + m] += feature[i][l] * feature[j][m];
+	    freqBackGround[l * featureDim + m] += feature[i][l] * feature[j][m];
+	  }
 	}
 	hicHigh++;
 	hicLine++;
       }else{
-	for(m = 0; m < featureDim; m++){
-	  freqBackGround[m] += feature[i][m];
-	}      
+	for(l = 0; l < featureDim; l++){
+	  for(m = 0; m < featureDim; m++){
+	    freqBackGround[l * featureDim + m] += feature[i][l] * feature[j][m];
+	  }
+	}
 	hicLine++;
       }    
-      if((hicLine % 1000) == 0){
+      if((hicLine % 100000) == 0){
 	fprintf(stderr, "proceeded %ld lines\n", hicLine);
       }
     }
   }
 
-  printf("libSVM format file is saved to %s\n", outFile);
+  printf("k-mer pair odds file is saved to %s\n", outFile);
 
   fclose(fpin);
 
@@ -161,12 +165,12 @@ int main_sub(const char *freqFile,
     exit(EXIT_FAILURE);
   }
 
-  for(m = 0; m < featureDim; m++){
+  for(m = 0; m < pairFeatureDim; m++){
     fprintf(fpout, "%f\t%ld\t%f\t%f\n", 
 	    (1.0 * freqHighContact[m] * hicLine) / (1.0 * freqBackGround[m] * hicHigh),
 	    m,	   
-	    1.0 * freqHighContact[m] / hicHigh,
-	    1.0 * freqBackGround[m] / hicLine
+	    1.0 * freqHighContact[m] / (hicHigh * res * res),
+	    1.0 * freqBackGround[m] / (hicLine * res * res)
 	    );
   }
 
