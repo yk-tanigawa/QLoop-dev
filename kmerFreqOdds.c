@@ -162,11 +162,12 @@ int main_sub(const char *freqFile,
   }
 
   for(m = 0; m < featureDim; m++){
-    fprintf(fpout, "%ld\t%f\t%f\t%f\n", 
+    fprintf(fpout, "%f\t%ld\t%f\t%f\n", 
+	    (1.0 * freqHighContact[m] * hicLine) / (1.0 * freqBackGround[m] * hicHigh),
 	    m,	   
 	    1.0 * freqHighContact[m] / hicHigh,
-	    1.0 * freqBackGround[m] / hicLine,
-	    (1.0 * freqHighContact[m] * hicLine) / (1.0 * freqBackGround[m] * hicHigh));
+	    1.0 * freqBackGround[m] / hicLine
+	    );
   }
 
   fclose(fpout);
