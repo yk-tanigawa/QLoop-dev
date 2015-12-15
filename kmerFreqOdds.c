@@ -84,6 +84,46 @@ int readFeature(const char *freqFile,
   return 0;
 }
 
+inline char Binary2char(const long binaryNum){
+  if(binaryNum == 0){
+    return 'A'; 
+  }else if(binaryNum == 1){
+    return 'C';
+  }else if(binaryNum == 2){
+    return 'G'; 
+  }else if(binaryNum == 3){
+    return 'T';
+  }else{
+    return '?'; 
+  }
+}
+
+int setKmerStrings(const int k,
+		   char ***kmerStrings){
+  const unsigned long kmerNum = 1 << (2 * k);
+  int i;
+  unsigned long l, m;
+  if((*kmerStrings = calloc(sizeof(char *), kmerNum)) == NULL){
+    fprintf(stderr, "error(calloc) kmerStrings\n%s\n",
+	    strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+  for(l = 0; l < kmerNum; l++){
+    if(((*kmerStrings)[l] = calloc(sizeof(char), k + 1)) == NULL){
+      fprintf(stderr, "error(calloc) kmerStrings[%ld]\n%s\n",
+	      l, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+    m = l;
+    for(i = k - 1; i >= 0; i--){
+      (*kmerStrings)[l][i] = Binary2char((m & 3));
+      m = (m >> 2);
+    }
+  }
+  return 0;
+}
+
+
 int main_sub(const char *freqFile,
 	     const char *hicFile,
 	     const int k,
@@ -97,10 +137,12 @@ int main_sub(const char *freqFile,
   unsigned long featureLen, hicLine = 0, hicHigh = 0;
   unsigned long *freqBackGround, *freqHighContact;
   char outFile[F_NAME_LEN], buf[BUF_SIZE], mijbuf[128];
+  char **kmerStrings;
   double mij;
   int i, j;   /* index for genomic bins */
   long l, m;  /* index for k-mers */
 
+  setKmerStrings(k, &kmerStrings);
 
   if((freqBackGround = calloc(sizeof(unsigned long), pairFeatureDim)) == NULL){
     fprintf(stderr, "error(calloc) freqBase\n%s\n",
@@ -149,7 +191,7 @@ int main_sub(const char *freqFile,
 	}
 	hicLine++;
       }    
-      if((hicLine % 100000) == 0){
+      if((hicLine % 1000000) == 0){
 	fprintf(stderr, "proceeded %ld lines\n", hicLine);
       }
     }
@@ -165,13 +207,17 @@ int main_sub(const char *freqFile,
     exit(EXIT_FAILURE);
   }
 
-  for(m = 0; m < pairFeatureDim; m++){
-    fprintf(fpout, "%f\t%ld\t%f\t%f\n", 
-	    (1.0 * freqHighContact[m] * hicLine) / (1.0 * freqBackGround[m] * hicHigh),
-	    m,	   
-	    1.0 * freqHighContact[m] / (hicHigh * res * res),
-	    1.0 * freqBackGround[m] / (hicLine * res * res)
-	    );
+  for(l = 0; l < featureDim; l++){
+    for(m = 0; m < featureDim; m++){
+      fprintf(fpout, "%f\t%s\t%s\t%ld\t%f\t%f\n", 
+	      (1.0 * freqHighContact[l * featureDim + m] * hicLine) / (1.0 * freqBackGround[l * featureDim + m] * hicHigh),
+	      kmerStrings[l],
+	      kmerStrings[m],
+	      l * featureDim + m,	   
+	      1.0 * freqHighContact[l * featureDim + m] / (hicHigh * res * res),
+	      1.0 * freqBackGround[l * featureDim + m] / (hicLine * res * res)
+	      );
+    }
   }
 
   fclose(fpout);
