@@ -97,8 +97,7 @@ int main_sub(const char *freqFile,
   char outFile[F_NAME_LEN], buf[BUF_SIZE], mijbuf[128];
   double mij;
   int i, j;   /* index for genomic bins */
-  long l, m;  /* index for k-mers */
-  long z;
+  long m;  /* index for k-mers */
 
   sprintf(outFile, "%s.k%d.t%f.libsvm", hicFile, k, threshold);
 
@@ -122,15 +121,18 @@ int main_sub(const char *freqFile,
     mij = strtod(mijbuf, NULL);
     i /= res;
     j /= res;
+
     if(feature[i] != NULL && feature[j] != NULL){
       fprintf(fpout, "%d", ((mij >= threshold)? 1 : 0));
-      z = 1;
-      for(l = 0; l < featureDim; l++){
-	for(m = 0; m < featureDim; m++){
-	  fprintf(fpout, " %ld:%d", z++, 
-		  ((feature[i][l] * feature[j][m] > 0) ? 1 : 0));
-	}
-      }
+      for(m = 1; m <= featureDim; m++){
+	fprintf(fpout, " %ld:%d", m, feature[i][m]);
+      }      
+      fprintf(fpout, "\n");
+
+      fprintf(fpout, "%d", ((mij >= threshold)? 1 : 0));
+      for(m = 1; m <= featureDim; m++){
+	fprintf(fpout, " %ld:%d", m, feature[j][m]);
+      }      
       fprintf(fpout, "\n");
     }
   }
