@@ -7,10 +7,10 @@
 #include "diffSec.h"
 
 inline void adaDataOnTheFly(const int h_i,
-			 const int h_j,
-			 const int **kmerFreq,
-			 const int k,
-			 short *x){
+			    const int h_j,
+			    const int **kmerFreq,
+			    const int k,
+			    short *x){
   const unsigned long nkmers = 1 << (2 * k);
   unsigned long l, m;
   for(l = 0; l < nkmers; l++){
@@ -22,10 +22,10 @@ inline void adaDataOnTheFly(const int h_i,
 }
 
 inline short adaDataOnTheFlyAxis(const int h_i,
-			      const int h_j,
-			      const int **kmerFreq,
-			      const int k,
-			      const int axis){
+				 const int h_j,
+				 const int **kmerFreq,
+				 const int k,
+				 const int axis){
   const unsigned long nkmers = 1 << (2 * k);
   return (((kmerFreq[h_i][axis / nkmers] * kmerFreq[h_j][axis % nkmers]) > 0) ? 1 : 0);
 }
@@ -165,6 +165,11 @@ int adaboostLearn(const int *y,
 
 
 #if 0
+
+/** 
+ *   The following code is copied from another project, 
+ * and hence does not cabaple with this program 
+ */
 int adaboost_apply(const unsigned long *lernerAxis,
 		   const int *lernerPred,
 		   const double *beta,

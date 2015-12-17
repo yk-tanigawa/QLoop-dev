@@ -29,35 +29,6 @@ int binarization(const double *source,
   return 0;
 }
 
-int dump_results(FILE *fp,
-		 const unsigned long *adaAxis,
-		 const int *adaSign,
-		 const double *adaBeta,
-		 const unsigned long T,
-		 const int k){
-  const unsigned long nkmers = 1 << (2 * k);
-  unsigned long t;
-  char **kmerStrings;
-
-  setKmerStrings(k, &kmerStrings);
-  
-  for(t = 0; t < T; t++){
-    fprintf(fp, "%e\t%s\t%s\t%ld\t%d\n",
-	    adaBeta[t],
-	    kmerStrings[adaAxis[t] / nkmers],
-	    kmerStrings[adaAxis[t] % nkmers],
-	    adaAxis[t],
-	    adaSign[t]);
-  }
-
-  for(t = 0; t < nkmers; t++){
-    free(kmerStrings[t]);
-  }
-  free(kmerStrings);
-
-  return 0;
-}
-
 int main_sub(const char *freqFile,
 	     const char *hicFile,
 	     const int k,
@@ -67,7 +38,7 @@ int main_sub(const char *freqFile,
 	     const char *outFile){
 
   int **kmerFreq;
-  unsigned long nBin;
+  unsigned long nBin, b;
 
   int *h_i, *h_j;
   double *h_mij;
@@ -80,128 +51,56 @@ int main_sub(const char *freqFile,
 
   FILE *fp;
 
-  readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
-  readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
-  binarization(h_mij, threshold, nHic, &y);
-  free(h_mij);
-
-  adaboostLearn((const int *)y, 
-		(const int *)h_i, (const int*)h_j, 
-		(const int **)kmerFreq, 
-		k, T, (const unsigned long)nHic, 
-		1 << (4 * k),
-		&adaAxis, &adaSign, &adaBeta);
-
-  if(outFile == NULL){
-    dump_results(stderr, adaAxis, adaSign, adaBeta, T, k);
-  }else{
-    if((fp = fopen(outFile, "w")) == NULL){
-      fprintf(stderr, "error: fdopen %s\n%s\n",
-	      outFile, strerror(errno));
-      exit(EXIT_FAILURE);
-    }
-    
-    fprintf(stderr, "Writing results to : %s\n", outFile);
-
-    dump_results(fp, adaAxis, adaSign, adaBeta, T, k);
-
-    fclose(fp);
+  /* load data */
+  {
+    readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
+    readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
+    binarization(h_mij, threshold, nHic, &y);
+    free(h_mij);
   }
 
-  //char **kmerStrings;
-  //setKmerStrings(k, &kmerStrings);
-
-#if 0
-  FILE *fpin, *fpout;
-  int **feature;
-  const unsigned long pairFeatureDim = 1 << (4 * k);
-  const unsigned long featureDim = 1 << (2 * k);
-  unsigned long featureLen, hicLine = 0, hicHigh = 0;
-  //  unsigned long *freqBackGround, *freqHighContact;
-  char outFile[F_NAME_LEN], buf[BUF_SIZE], mijbuf[128];
-  char **kmerStrings;
-  double mij;
-  int i, j;   /* index for genomic bins */
-  unsigned long l, m;  /* index for k-mers */
-#endif
-
-
-#if 0
-  freqBackGround = calloc_errchk(sizeof(unsigned long), pairFeatureDim, "calloc freqBackGround");
-  freqHighContact = calloc_errchk(sizeof(unsigned long), pairFeatureDim, "calloc freqHighContact");
-
-
-  sprintf(outFile, "%s.k%d.t%f.kmerPairOdds", hicFile, k, threshold);
-
-#endif
-
-
-#if 0
-  if((fpin = fopen(hicFile, "r")) == NULL){
-    fprintf(stderr, "error: fdopen %s\n%s\n",
-	    hicFile, strerror(errno));
-    exit(EXIT_FAILURE);
+  /* execute adaboost */
+  {
+    adaboostLearn((const int *)y, 
+		  (const int *)h_i, (const int*)h_j, 
+		  (const int **)kmerFreq, 
+		  k, T, (const unsigned long)nHic, 
+		  1 << (4 * k),
+		  &adaAxis, &adaSign, &adaBeta);
   }
 
-  while(fgets(buf, BUF_SIZE, fpin) != NULL){
-    sscanf(buf, "%d\t%d\t%s", &i, &j, (char *)(&mijbuf));
-    mij = strtod(mijbuf, NULL);
-    i /= res;
-    j /= res;
-
-    if(feature[i] != NULL && feature[j] != NULL){
-      if(mij >= threshold){
-	for(l = 0; l < featureDim; l++){
-	  for(m = 0; m < featureDim; m++){
-	    freqHighContact[l * featureDim + m] += feature[i][l] * feature[j][m];
-	    freqBackGround[l * featureDim + m] += feature[i][l] * feature[j][m];
-	  }
-	}
-	hicHigh++;
-	hicLine++;
-      }else{
-	for(l = 0; l < featureDim; l++){
-	  for(m = 0; m < featureDim; m++){
-	    freqBackGround[l * featureDim + m] += feature[i][l] * feature[j][m];
-	  }
-	}
-	hicLine++;
-      }    
-      if((hicLine % 1000000) == 0){
-	fprintf(stderr, "proceeded %ld lines\n", hicLine);
+  /* write or show the results */
+  {
+    if(outFile == NULL){
+      dump_results(stderr, adaAxis, adaSign, adaBeta, T, k);
+    }else{
+      if((fp = fopen(outFile, "w")) == NULL){
+	fprintf(stderr, "error: fdopen %s\n%s\n",
+		outFile, strerror(errno));
+	exit(EXIT_FAILURE);
       }
+      
+      fprintf(stderr, "Writing results to : %s\n", outFile);
+      
+      dump_results(fp, adaAxis, adaSign, adaBeta, T, k);
+      
+      fclose(fp);
     }
   }
 
-  printf("k-mer pair odds file is saved to %s\n", outFile);
-
-  fclose(fpin);
-
-  if((fpout = fopen(outFile, "w")) == NULL){
-    fprintf(stderr, "error: fdopen %s\n%s\n",
-	    outFile, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-
-  for(l = 0; l < featureDim; l++){
-    for(m = 0; m < featureDim; m++){
-      fprintf(fpout, "%f\t%s\t%s\t%ld\t%e\t%e\n", 
-	      (1.0 * freqHighContact[l * featureDim + m] * hicLine) / (1.0 * freqBackGround[l * featureDim + m] * hicHigh),
-	      kmerStrings[l],
-	      kmerStrings[m],
-	      l * featureDim + m,	   
-	      1.0 * freqHighContact[l * featureDim + m] / (hicHigh * res * res),
-	      1.0 * freqBackGround[l * featureDim + m] / (hicLine * res * res)
-	      );
+  /* free memory */
+  {
+    for(b = 0; b < nBin; b++){
+      free(kmerFreq[b]);
     }
+    free(kmerFreq);
+    free(h_i);
+    free(h_j);
+    free(y);
+    free(adaAxis);
+    free(adaSign);
+    free(adaBeta);
   }
-
-  fclose(fpout);
-
-  free(freqBackGround);
-  free(freqHighContact);
-#endif
-
   return 0;
 }
 
