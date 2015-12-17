@@ -8,10 +8,11 @@
 #include <string.h>
 #include <math.h>
 #include <getopt.h>
+#include <libgen.h>
 
+#include "adaboost.h"
 #include "calloc_errchk.h"
 #include "io.h"
-#include "adaboost.h"
 
 #define F_NAME_LEN 128
 #define BUF_SIZE 4096
@@ -63,7 +64,7 @@ int main_sub(const char *freqFile,
 	     const int res,
 	     const double threshold,
 	     const unsigned long T,
-	     const char *outDir){
+	     const char *outFile){
 
   int **kmerFreq;
   unsigned long nBin;
@@ -77,6 +78,8 @@ int main_sub(const char *freqFile,
   int *adaSign;
   double *adaBeta;
 
+  FILE *fp;
+
   readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
   readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
   binarization(h_mij, threshold, nHic, &y);
@@ -88,8 +91,22 @@ int main_sub(const char *freqFile,
 		k, T, (const unsigned long)nHic, 
 		1 << (4 * k),
 		&adaAxis, &adaSign, &adaBeta);
-		
-  dump_results(stderr, adaAxis, adaSign, adaBeta, T, k);
+
+  if(outFile == NULL){
+    dump_results(stderr, adaAxis, adaSign, adaBeta, T, k);
+  }else{
+    if((fp = fopen(outFile, "w")) == NULL){
+      fprintf(stderr, "error: fdopen %s\n%s\n",
+	      outFile, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+    
+    fprintf(stderr, "Writing results to : %s\n", outFile);
+
+    dump_results(fp, adaAxis, adaSign, adaBeta, T, k);
+
+    fclose(fp);
+  }
 
   //char **kmerStrings;
   //setKmerStrings(k, &kmerStrings);
@@ -258,8 +275,8 @@ int check_params(const char *freqFile,
   }
 
   if(outDir == NULL){
-    fprintf(stderr, "[ERROR] output directory is not specified\n");
-    errflag++;
+    fprintf(stderr, "[WARNING] output directory is not specified\n");
+    fprintf(stderr, "          results will be written to stderr\n");
   }else if(errflag == 0){
     printf("  Output dir:    %s\n", outDir);
   }
@@ -273,7 +290,7 @@ int check_params(const char *freqFile,
 }
 
 int main(int argc, char **argv){
-  char *freqFile = NULL, *hicFile = NULL, *outDir = NULL;
+  char *freqFile = NULL, *hicFile = NULL, *outDir = NULL, *outFile = NULL;
   int k = 0, res = 0;
   unsigned long T = 0;
   double threshold = 0;
@@ -328,7 +345,13 @@ int main(int argc, char **argv){
 
   check_params(freqFile, hicFile, k, res, threshold, T, outDir, argv[0]);
 
-  main_sub(freqFile, hicFile, k, res, threshold, T, outDir);
+  if(outDir != NULL){
+    outFile = calloc_errchk(F_NAME_LEN, sizeof(char), "calloc outFile");
+    sprintf(outFile, "%s/%s.k%d.t%f.T%ld.stamps",
+	    outDir, basename(hicFile), k, threshold, T);
+  }
+
+  main_sub(freqFile, hicFile, k, res, threshold, T, outFile);
  
   return 0;
 }

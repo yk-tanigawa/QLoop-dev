@@ -1,8 +1,10 @@
 #ifndef __adaboost_H__
 #define __adaboost_H__ 
 
+#include <sys/time.h>
 #include <math.h>
 #include "calloc_errchk.h"
+#include "diffSec.h"
 
 inline void adaDataOnTheFly(const int h_i,
 			 const int h_j,
@@ -43,6 +45,7 @@ int adaboostLearn(const int *y,
   short *selected, *x, xaxis;
   double *w, *p, *err, wsum, epsilon, min, max;
   unsigned long t, i, d, argmind, argmaxd;
+  struct timeval timeStart, timePrev, time;
 
   *adaAxis = calloc_errchk(T, sizeof(unsigned long), "calloc adaAxis");
   *adaSign = calloc_errchk(T, sizeof(int), "calloc adaSign");
@@ -57,6 +60,11 @@ int adaboostLearn(const int *y,
   for(i = 0; i < N; i++){
     w[i] = 1.0 / N;
   }
+
+  gettimeofday(&timeStart, NULL);
+  cpTimeval(timeStart, &timePrev);
+  
+  fprintf(stderr, "t\tbeta\t\tweak lerner\ttime(itration)\ttime(total) [s]\n");
 
   for(t = 0; t < T; t++){
     /* step 1 : compute normalized weights p[] */
@@ -138,8 +146,13 @@ int adaboostLearn(const int *y,
       }
     }
     
-    fprintf(stderr, "t = %d\tbeta[t] = %e\tlerner = (%ld, %d)\n",
-	    t, (*adaBeta)[t], (*adaAxis)[t], (*adaSign)[t]);	       
+  gettimeofday(&time, NULL);
+    
+    fprintf(stderr, "%ld\t%e\t(%ld, %d)\t%e\t%e\n",
+	    t, (*adaBeta)[t], (*adaAxis)[t], (*adaSign)[t],
+	    diffSec(timePrev, time), diffSec(timeStart, time));	       
+
+    cpTimeval(time, &timePrev);
   }
 
   free(selected);
