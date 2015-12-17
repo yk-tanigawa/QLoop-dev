@@ -9,6 +9,8 @@
 #include <math.h>
 #include <getopt.h>
 
+#include "calloc_errchk.h"
+
 #define F_NAME_LEN 128
 #define BUF_SIZE 4096
 
@@ -45,10 +47,7 @@ int readFeature(const char *freqFile,
 
   *featureLen = wc(freqFile);
   
-  if((*feature = calloc(sizeof(int *), *featureLen)) == NULL){
-    perror("error(calloc) feature");
-    exit(EXIT_FAILURE);
-  }
+  *feature = calloc_errchk(sizeof(int *), *featureLen, "calloc feature");
 
   if((fp = fopen(freqFile, "r")) == NULL){
     fprintf(stderr, "error: fdopen %s\n%s\n",
@@ -61,12 +60,7 @@ int readFeature(const char *freqFile,
       (*feature)[l] = NULL;
     }else{
       /** memory allocation */
-      if(((*feature)[l] = calloc(sizeof(int), featureDim)) == NULL){
-	fprintf(stderr, "error(calloc) fature[%ld]\n%s\n",
-		l, strerror(errno));
-	exit(EXIT_FAILURE);
-      }
-
+      (*feature)[l] = calloc_errchk(sizeof(int), featureDim, "calloc feature[l]");
       i = 0;
       tok = strtok(buf, dlim);
       while(tok != NULL && i < featureDim){
@@ -103,17 +97,9 @@ int setKmerStrings(const int k,
   const unsigned long kmerNum = 1 << (2 * k);
   int i;
   unsigned long l, m;
-  if((*kmerStrings = calloc(sizeof(char *), kmerNum)) == NULL){
-    fprintf(stderr, "error(calloc) kmerStrings\n%s\n",
-	    strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+  *kmerStrings = calloc_errchk(sizeof(int *), kmerNum, "calloc kmerStrings");
   for(l = 0; l < kmerNum; l++){
-    if(((*kmerStrings)[l] = calloc(sizeof(char), k + 1)) == NULL){
-      fprintf(stderr, "error(calloc) kmerStrings[%ld]\n%s\n",
-	      l, strerror(errno));
-      exit(EXIT_FAILURE);
-    }
+    (*kmerStrings)[l] = calloc_errchk(sizeof(char), k + 1, "calloc kmerStrings[l]");
     m = l;
     for(i = k - 1; i >= 0; i--){
       (*kmerStrings)[l][i] = Binary2char((m & 3));
@@ -144,22 +130,11 @@ int main_sub(const char *freqFile,
 
   setKmerStrings(k, &kmerStrings);
 
-  if((freqBackGround = calloc(sizeof(unsigned long), pairFeatureDim)) == NULL){
-    fprintf(stderr, "error(calloc) freqBase\n%s\n",
-	    strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-
-  if((freqHighContact = calloc(sizeof(unsigned long), pairFeatureDim)) == NULL){
-    fprintf(stderr, "error(calloc) HiContact\n%s\n",
-	    strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-
+  freqBackGround = calloc_errchk(sizeof(unsigned long), pairFeatureDim, "calloc freqBackGround");
+  freqHighContact = calloc_errchk(sizeof(unsigned long), pairFeatureDim, "calloc freqHighContact");
   sprintf(outFile, "%s.k%d.t%f.kmerPairOdds", hicFile, k, threshold);
 
   readFeature(freqFile, k, &feature, &featureLen);
-  //fprintf(stderr, "%ld\n", featureLen);
 
   if((fpin = fopen(hicFile, "r")) == NULL){
     fprintf(stderr, "error: fdopen %s\n%s\n",
