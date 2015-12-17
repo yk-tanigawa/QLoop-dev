@@ -20,7 +20,7 @@ kmerFreqOdds: kmerFreqOdds.o
 kmerPairBoost: kmerPairBoost.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
-kmerPairBoost.o: adaboost.h calloc_errchk.h bit_op.h io.h
+kmerPairBoost.o: adaboost.h calloc_errchk.h io.h
 
 chrom: chrom.o
 	$(LD) $(LDFLAGS) -o $@ $^
