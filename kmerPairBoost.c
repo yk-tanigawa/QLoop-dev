@@ -298,10 +298,10 @@ int main(int argc, char **argv){
   if(outDir != NULL){
     outFile = calloc_errchk(F_NAME_LEN, sizeof(char), "calloc outFile");
     if(bitmode == 0){
-      sprintf(outFile, "%s/%s.k%d.t%f.T%ld.stamps",
+      sprintf(outFile, "%s%s.k%d.t%f.T%ld.stamps",
 	      outDir, basename(hicFile), k, threshold, T);
     }else{
-      sprintf(outFile, "%s/%s.k%d.t%f.T%ld.bit.stamps",
+      sprintf(outFile, "%s%s.k%d.t%f.T%ld.bit.stamps",
 	      outDir, basename(hicFile), k, threshold, T);
     }
   }
