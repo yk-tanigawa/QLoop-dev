@@ -66,6 +66,51 @@ int readTableInt(const char *file,
 
   return 0;
 }
+#if 0
+int readTableBinary(const char *file,
+		    const char *dlim,
+		    const unsigned long ncol,
+		    int ***table,
+		    unsigned long *nrow){
+  /**
+   * all the elements in the table will be either 0 or 1
+   */
+
+  FILE *fp;
+  char buf[BUF_SIZE];
+  char *tok;
+  unsigned long col = 0, row = 0;
+
+  *nrow = wc(file);
+  
+  *table = calloc_errchk(sizeof(int *), *nrow, "calloc table");
+
+  if((fp = fopen(file, "r")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    file, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  while(fgets(buf, BUF_SIZE, fp)){
+    if(buf[0] == '*'){
+      (*table)[row] = NULL;
+    }else{
+      (*table)[row] = calloc_errchk(sizeof(int), ncol, "calloc table[l]");
+      col = 0;
+      tok = strtok(buf, dlim);
+      while(tok != NULL && col < ncol){
+	(*table)[row][col++] = ((atoi(tok) > 0) ? 1 : 0);
+	tok = strtok(NULL, dlim);
+      }
+    }
+    row++;
+  }
+  
+  fclose(fp);
+
+  return 0;
+}
+#endif
 
 int readHic(const char *file,
 	    const int res,

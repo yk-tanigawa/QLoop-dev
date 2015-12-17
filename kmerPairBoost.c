@@ -35,13 +35,15 @@ int main_sub(const char *freqFile,
 	     const int res,
 	     const double threshold,
 	     const unsigned long T,
-	     const char *outFile){
+	     const char *outFile,
+	     const int bitmode){
 
   int **kmerFreq;
   unsigned long nBin, b;
 
   int *h_i, *h_j;
   double *h_mij;
+  unsigned int **x;
   int *y;
   unsigned long nHic;
 
@@ -51,22 +53,52 @@ int main_sub(const char *freqFile,
 
   FILE *fp;
 
-  /* load data */
-  {
-    readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
-    readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
-    binarization(h_mij, threshold, nHic, &y);
-    free(h_mij);
-  }
+  if(bitmode == 0){
+    /* generate data on the fly mode */
+    /* load data */
+    {
+      readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
+      readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
+      binarization(h_mij, threshold, nHic, &y);
+      free(h_mij);
+    }
 
-  /* execute adaboost */
-  {
-    adaboostLearn((const int *)y, 
-		  (const int *)h_i, (const int*)h_j, 
-		  (const int **)kmerFreq, 
-		  k, T, (const unsigned long)nHic, 
-		  1 << (4 * k),
-		  &adaAxis, &adaSign, &adaBeta);
+    /* execute adaboost */
+    {
+      adaboostLearn((const int *)y, 
+		    (const int *)h_i, (const int*)h_j, 
+		    (const int **)kmerFreq, 
+		    k, T, (const unsigned long)nHic, 
+		    1 << (4 * k),
+		    &adaAxis, &adaSign, &adaBeta);
+    }
+  }else{
+    /* bitmode */
+    /* load data */
+    {
+      readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
+      readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
+      binarization(h_mij, threshold, nHic, &y);
+      constructBitTable(h_i, h_j, kmerFreq,
+			(const unsigned long)nHic, k,
+			&x);
+      for(b = 0; b < nBin; b++){
+	free(kmerFreq[b]);
+      }
+      free(kmerFreq);
+      free(h_i);
+      free(h_j);
+      free(h_mij);
+    }
+
+    /* execute adaboost */
+    {
+      adaboostBitLearn((const int *)y, 
+		       (const unsigned int **)x,
+		       k, T, (const unsigned long)nHic, 
+		       1 << (4 * k),
+		       &adaAxis, &adaSign, &adaBeta);
+    }
   }
 
   /* write or show the results */
@@ -90,12 +122,19 @@ int main_sub(const char *freqFile,
 
   /* free memory */
   {
-    for(b = 0; b < nBin; b++){
-      free(kmerFreq[b]);
+    if(bitmode == 0){
+      for(b = 0; b < nBin; b++){
+	free(kmerFreq[b]);
+      }
+      free(kmerFreq);
+      free(h_i);
+      free(h_j);
+    }else{
+      for(b = 0; b < nHic; n++){
+	free(x[b]);
+      }
+      free(x);
     }
-    free(kmerFreq);
-    free(h_i);
-    free(h_j);
     free(y);
     free(adaAxis);
     free(adaSign);
@@ -125,6 +164,7 @@ int check_params(const char *freqFile,
 		 const double threshold,
 		 const unsigned long T,
 		 const char *outDir,
+		 const int bitmode,
 		 const char *progName){
   int errflag = 0;
 
@@ -180,6 +220,10 @@ int check_params(const char *freqFile,
     printf("  Output dir:    %s\n", outDir);
   }
 
+  if(bitmode != 0 && errflag == 0){
+    printf("  [INFO] bitmode\n");
+  }
+
   if(errflag > 0){
     show_usage(progName);
     exit(EXIT_FAILURE);
@@ -190,7 +234,7 @@ int check_params(const char *freqFile,
 
 int main(int argc, char **argv){
   char *freqFile = NULL, *hicFile = NULL, *outDir = NULL, *outFile = NULL;
-  int k = 0, res = 0;
+  int k = 0, res = 0, bitmode = 0;
   unsigned long T = 0;
   double threshold = 0;
 
@@ -206,10 +250,11 @@ int main(int argc, char **argv){
     {"threshold", required_argument, NULL, 't'},
     {"T",         required_argument, NULL, 'T'},
     {"out",       required_argument, NULL, 'o'},
+    {"bitmode",   no_argument,       NULL, 'b'},
     {0, 0, 0, 0}
   };
 
-  while((opt = getopt_long(argc, argv, "hvf:H:k:r:t:T:o:",
+  while((opt = getopt_long(argc, argv, "hvf:H:k:r:t:T:o:b",
 			   long_opts, &opt_idx)) != -1){
     switch (opt){
       case 'h': /* help */
@@ -239,10 +284,13 @@ int main(int argc, char **argv){
       case 'o': /* out */
 	outDir = optarg;
 	break;
+      case 'b': /* bitmode */
+	bitmode = 1;
+	break;
     }
   }
 
-  check_params(freqFile, hicFile, k, res, threshold, T, outDir, argv[0]);
+  check_params(freqFile, hicFile, k, res, threshold, T, outDir, bitmode, argv[0]);
 
   if(outDir != NULL){
     outFile = calloc_errchk(F_NAME_LEN, sizeof(char), "calloc outFile");
@@ -250,7 +298,7 @@ int main(int argc, char **argv){
 	    outDir, basename(hicFile), k, threshold, T);
   }
 
-  main_sub(freqFile, hicFile, k, res, threshold, T, outFile);
+  main_sub(freqFile, hicFile, k, res, threshold, T, outFile, bitmode);
  
   return 0;
 }
