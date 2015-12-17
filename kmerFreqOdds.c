@@ -209,7 +209,7 @@ int main_sub(const char *freqFile,
 
   for(l = 0; l < featureDim; l++){
     for(m = 0; m < featureDim; m++){
-      fprintf(fpout, "%f\t%s\t%s\t%ld\t%f\t%f\n", 
+      fprintf(fpout, "%f\t%s\t%s\t%ld\t%e\t%e\n", 
 	      (1.0 * freqHighContact[l * featureDim + m] * hicLine) / (1.0 * freqBackGround[l * featureDim + m] * hicHigh),
 	      kmerStrings[l],
 	      kmerStrings[m],
