@@ -9,7 +9,7 @@ EXEC = $(SRCS:.c=)
 RM = rm -f
 
 
-all: prep kmerFreqOdds
+all: $(EXEC)
 
 prep: prep.o
 	$(LD) $(LDFLAGS) -o $@ $^
@@ -17,6 +17,10 @@ prep: prep.o
 kmerFreqOdds: kmerFreqOdds.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+kmerPairBoost: kmerPairBoost.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
+kmerPairBoost.o: adaboost.h calloc_errchk.h bit_op.h
 
 chrom: chrom.o
 	$(LD) $(LDFLAGS) -o $@ $^
