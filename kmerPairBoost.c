@@ -20,7 +20,7 @@
 int binarization(const double *source,
 		 const double threshold,
 		 const unsigned long length,
-		 int **target){
+		 unsigned int **target){
   unsigned long i;
   *target = calloc_errchk(length, sizeof(int), "calloc target");
   for(i = 0; i < length; i++){
@@ -44,7 +44,7 @@ int main_sub(const char *freqFile,
   int *h_i, *h_j;
   double *h_mij;
   unsigned int **x;
-  int *y;
+  unsigned int *y;
   unsigned long nHic;
 
   unsigned long *adaAxis;
@@ -65,7 +65,7 @@ int main_sub(const char *freqFile,
 
     /* execute adaboost */
     {
-      adaboostLearn((const int *)y, 
+      adaboostLearn((const unsigned int *)y, 
 		    (const int *)h_i, (const int*)h_j, 
 		    (const int **)kmerFreq, 
 		    k, T, (const unsigned long)nHic, 
@@ -78,10 +78,13 @@ int main_sub(const char *freqFile,
     {
       readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
       readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
+
       binarization(h_mij, threshold, nHic, &y);
-      constructBitTable(h_i, h_j, kmerFreq,
+      constructBitTable((const int *)h_i, (const int*)h_j, 			
+			(const int **)kmerFreq, 
 			(const unsigned long)nHic, k,
 			&x);
+
       for(b = 0; b < nBin; b++){
 	free(kmerFreq[b]);
       }
@@ -93,9 +96,9 @@ int main_sub(const char *freqFile,
 
     /* execute adaboost */
     {
-      adaboostBitLearn((const int *)y, 
+      adaboostBitLearn((const unsigned int *)y, 
 		       (const unsigned int **)x,
-		       k, T, (const unsigned long)nHic, 
+		       T, (const unsigned long)nHic, 
 		       1 << (4 * k),
 		       &adaAxis, &adaSign, &adaBeta);
     }
@@ -130,7 +133,7 @@ int main_sub(const char *freqFile,
       free(h_i);
       free(h_j);
     }else{
-      for(b = 0; b < nHic; n++){
+      for(b = 0; b < nHic; b++){
 	free(x[b]);
       }
       free(x);
@@ -294,8 +297,13 @@ int main(int argc, char **argv){
 
   if(outDir != NULL){
     outFile = calloc_errchk(F_NAME_LEN, sizeof(char), "calloc outFile");
-    sprintf(outFile, "%s/%s.k%d.t%f.T%ld.stamps",
-	    outDir, basename(hicFile), k, threshold, T);
+    if(bitmode == 0){
+      sprintf(outFile, "%s/%s.k%d.t%f.T%ld.stamps",
+	      outDir, basename(hicFile), k, threshold, T);
+    }else{
+      sprintf(outFile, "%s/%s.k%d.t%f.T%ld.bit.stamps",
+	      outDir, basename(hicFile), k, threshold, T);
+    }
   }
 
   main_sub(freqFile, hicFile, k, res, threshold, T, outFile, bitmode);

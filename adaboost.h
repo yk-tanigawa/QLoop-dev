@@ -11,7 +11,7 @@ inline void adaDataOnTheFly(const int h_i,
 			    const int h_j,
 			    const int **kmerFreq,
 			    const int k,
-			    short *x){
+			    unsigned short *x){
   const unsigned long nkmers = 1 << (2 * k);
   unsigned long l, m;
   for(l = 0; l < nkmers; l++){
@@ -22,17 +22,17 @@ inline void adaDataOnTheFly(const int h_i,
   return;
 }
 
-inline short adaDataOnTheFlyAxis(const int h_i,
-				 const int h_j,
-				 const int **kmerFreq,
-				 const int k,
-				 const int axis){
+inline unsigned short adaDataOnTheFlyAxis(const int h_i,
+					  const int h_j,
+					  const int **kmerFreq,
+					  const int k,
+					  const int axis){
   const unsigned long nkmers = 1 << (2 * k);
   return (((kmerFreq[h_i][axis / nkmers] * kmerFreq[h_j][axis % nkmers]) > 0) ? 1 : 0);
 }
 
 
-int adaboostLearn(const int *y,
+int adaboostLearn(const unsigned int *y,
 		  const int *h_i,
 		  const int *h_j,
 		  const int **kmerFreq,
@@ -43,7 +43,8 @@ int adaboostLearn(const int *y,
 		  unsigned long **adaAxis,
 		  int **adaSign,
 		  double **adaBeta){
-  short *selected, *x, xaxis;
+  short *selected;
+  unsigned short *x, xaxis;
   double *w, *p, *err, wsum, epsilon, min, max;
   unsigned long t, i, d, argmind, argmaxd;
   struct timeval timeStart, timePrev, time;
@@ -53,7 +54,7 @@ int adaboostLearn(const int *y,
   *adaBeta = calloc_errchk(T, sizeof(double), "calloc adaBeta");
 
   selected = calloc_errchk(dim, sizeof(short), "calloc selected");
-  x = calloc_errchk(dim, sizeof(short), "calloc x");
+  x = calloc_errchk(dim, sizeof(unsigned short), "calloc x");
   w = calloc_errchk(N, sizeof(double), "calloc w");
   p = calloc_errchk(N, sizeof(double), "calloc p");
   err = calloc_errchk(dim, sizeof(double), "calloc count");
@@ -195,9 +196,9 @@ int constructBitTable(const int *h_i,
   unsigned long n, l, m, lm;
   unsigned int buf = 0;
   {
-    *x = calloc_chk(nHic, sizeof(unsigned int *), "calloc x");
+    *x = calloc_errchk(nHic, sizeof(unsigned int *), "calloc x");
     for(n = 0; n < nHic; n++){
-      (*x)[n] = calloc_chk(((nkmerpairs + intBits - 1) / intBits), sizeof(unsigned int), "calloc x[n]");
+      (*x)[n] = calloc_errchk(((nkmerpairs + intBits - 1) / intBits), sizeof(unsigned int), "calloc x[n]");
     }
   }
 
@@ -221,9 +222,8 @@ int constructBitTable(const int *h_i,
   return 0;
 }
 
-int adaboostBitLearn(const int *y,
+int adaboostBitLearn(const unsigned int *y,
 		     const unsigned int **x,
-		     const int k,
 		     const unsigned long T,
 		     const unsigned long N,
 		     const unsigned long dim,
