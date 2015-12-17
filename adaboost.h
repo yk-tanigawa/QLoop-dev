@@ -138,6 +138,8 @@ int adaboostLearn(const int *y,
       }
     }
     
+    fprintf(stderr, "t = %d\tbeta[t] = %e\tlerner = (%ld, %d)\n",
+	    t, (*adaBeta)[t], (*adaAxis)[t], (*adaSign)[t]);	       
   }
 
   free(selected);
