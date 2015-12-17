@@ -1,6 +1,6 @@
 CC = gcc
 LD = gcc
-CFLAGS = -Wall -O2
+CFLAGS = -Wall -Wextra -O2
 LDFLAGS = #-lpthread -lm
 SRCS := $(wildcard *.c) # wildcard
 OBJS = $(SRCS:.c=.o)
@@ -20,7 +20,7 @@ kmerFreqOdds: kmerFreqOdds.o
 kmerPairBoost: kmerPairBoost.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
-kmerPairBoost.o: adaboost.h calloc_errchk.h bit_op.h
+kmerPairBoost.o: adaboost.h calloc_errchk.h bit_op.h io.h
 
 chrom: chrom.o
 	$(LD) $(LDFLAGS) -o $@ $^

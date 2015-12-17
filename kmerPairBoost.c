@@ -10,105 +10,10 @@
 #include <getopt.h>
 
 #include "calloc_errchk.h"
+#include "io.h"
 
 #define F_NAME_LEN 128
 #define BUF_SIZE 4096
-
-long wc(const char *fName){
-  long lines = 0;
-  FILE* fp;
-  char buf[BUF_SIZE];
-  
-  if((fp = fopen(fName, "r")) == NULL){
-    fprintf(stderr, "error: fdopen %s\n%s\n",
-	    fName, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-
-  while(fgets(buf, BUF_SIZE, fp)){
-    lines++;
-  }
-
-  fclose(fp);
-
-  return lines;
-}
-
-int readFeature(const char *freqFile,
-		const int k,
-		int ***feature,
-		unsigned long *featureLen){
-  FILE *fp;
-  char buf[BUF_SIZE];
-  char *tok;
-  const char *dlim = "\t";
-  long i = 0, l = 0;
-  const unsigned long featureDim = 1 << (2 * k);
-
-  *featureLen = wc(freqFile);
-  
-  *feature = calloc_errchk(sizeof(int *), *featureLen, "calloc feature");
-
-  if((fp = fopen(freqFile, "r")) == NULL){
-    fprintf(stderr, "error: fdopen %s\n%s\n",
-	    freqFile, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-
-  while(fgets(buf, BUF_SIZE, fp)){
-    if(buf[0] == '*'){
-      (*feature)[l] = NULL;
-    }else{
-      /** memory allocation */
-      (*feature)[l] = calloc_errchk(sizeof(int), featureDim, "calloc feature[l]");
-      i = 0;
-      tok = strtok(buf, dlim);
-      while(tok != NULL && i < featureDim){
-	(*feature)[l][i++] = atoi(tok);
-	//fprintf(stderr, "%d ", (*feature)[l][i - 1]);
-	tok = strtok(NULL, dlim);
-      }
-      //fprintf(stderr, "\n");
-    }
-    l++;
-  }
-  
-  fclose(fp);
-
-  return 0;
-}
-
-inline char Binary2char(const long binaryNum){
-  if(binaryNum == 0){
-    return 'A'; 
-  }else if(binaryNum == 1){
-    return 'C';
-  }else if(binaryNum == 2){
-    return 'G'; 
-  }else if(binaryNum == 3){
-    return 'T';
-  }else{
-    return '?'; 
-  }
-}
-
-int setKmerStrings(const int k,
-		   char ***kmerStrings){
-  const unsigned long kmerNum = 1 << (2 * k);
-  int i;
-  unsigned long l, m;
-  *kmerStrings = calloc_errchk(sizeof(int *), kmerNum, "calloc kmerStrings");
-  for(l = 0; l < kmerNum; l++){
-    (*kmerStrings)[l] = calloc_errchk(sizeof(char), k + 1, "calloc kmerStrings[l]");
-    m = l;
-    for(i = k - 1; i >= 0; i--){
-      (*kmerStrings)[l][i] = Binary2char((m & 3));
-      m = (m >> 2);
-    }
-  }
-  return 0;
-}
-
 
 int main_sub(const char *freqFile,
 	     const char *hicFile,
@@ -126,7 +31,7 @@ int main_sub(const char *freqFile,
   char **kmerStrings;
   double mij;
   int i, j;   /* index for genomic bins */
-  long l, m;  /* index for k-mers */
+  unsigned long l, m;  /* index for k-mers */
 
   setKmerStrings(k, &kmerStrings);
 
@@ -134,7 +39,7 @@ int main_sub(const char *freqFile,
   freqHighContact = calloc_errchk(sizeof(unsigned long), pairFeatureDim, "calloc freqHighContact");
   sprintf(outFile, "%s.k%d.t%f.kmerPairOdds", hicFile, k, threshold);
 
-  readFeature(freqFile, k, &feature, &featureLen);
+  readTableInt(freqFile, "\t", 1 << (2 * k), &feature, &featureLen);
 
   if((fpin = fopen(hicFile, "r")) == NULL){
     fprintf(stderr, "error: fdopen %s\n%s\n",
