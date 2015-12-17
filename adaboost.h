@@ -198,7 +198,8 @@ int constructBitTable(const int *h_i,
   {
     *x = calloc_errchk(nHic, sizeof(unsigned int *), "calloc x");
     for(n = 0; n < nHic; n++){
-      (*x)[n] = calloc_errchk(((nkmerpairs + intBits - 1) / intBits), sizeof(unsigned int), "calloc x[n]");
+      (*x)[n] = calloc_errchk(((nkmerpairs + intBits - 1) / intBits), 
+			      sizeof(unsigned int), "calloc x[n]");
     }
   }
 
@@ -218,7 +219,6 @@ int constructBitTable(const int *h_i,
     }   
   }
   
-
   return 0;
 }
 
