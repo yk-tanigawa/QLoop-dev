@@ -17,6 +17,7 @@
 #define F_NAME_LEN 128
 #define BUF_SIZE 4096
 
+#if 0
 int binarization(const double *source,
 		 const double threshold,
 		 const unsigned long length,
@@ -28,6 +29,34 @@ int binarization(const double *source,
   }
   return 0;
 }
+#endif
+
+int binarization(const double *source,
+		 const double threshold,
+		 const unsigned long length,
+		 unsigned int **target){
+  const size_t intBits = 8 * sizeof(unsigned int);
+  unsigned long i;
+  unsigned int buf = 0;
+  *target = calloc_errchk((length + intBits - 1) / intBits, 
+			  sizeof(unsigned int), "calloc target");
+  {
+    for(i = 0; i < length; i++){
+      buf = (buf << 1);
+      buf += ((source[i] > threshold) ? 1 : 0);
+      if(((i + 1) % intBits) == 0){
+	(*target)[i / intBits] = buf;
+	buf = 0;
+      }
+    }
+    if((length % intBits) != 0){
+      buf = (buf << (intBits - (length % intBits)));
+      (*target)[length / intBits] = buf;
+    }
+  }
+  return 0;
+}
+
 
 int main_sub(const char *freqFile,
 	     const char *hicFile,
