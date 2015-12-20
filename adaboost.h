@@ -414,11 +414,34 @@ double adaboostBitColumComputeErr(const unsigned int *x,
   return err;
 }
 
-int adaboostBitColumUpdateWeight(const unsigned int *x,
-				 const unsigned int *y,
-				 const unsigned long N,
-				 const double beta,
-				 double **w){
+int adaboostBitColumUpdateWeightSign0(const unsigned int *x,
+				      const unsigned int *y,
+				      const unsigned long N,
+				      const double beta,
+				      double **w){
+  const size_t bitNum = 8 * sizeof(unsigned int);
+  unsigned int xor_x_y;
+  unsigned long ary_index;
+  int bit_pos;
+  for(ary_index = 0; ary_index <= N / bitNum; ary_index++){
+    xor_x_y = (x[ary_index]) ^ (y[ary_index]);
+    /* XOR operation works as a true-false test of a
+     * weak learner x[] */
+    for(bit_pos = bitNum - 1; bit_pos >= 0; bit_pos--){
+      if((xor_x_y & 1) == 0){
+	(*w)[ary_index * bitNum + bit_pos] *= beta;
+      }
+      xor_x_y >>= 1;
+    }
+  }
+  return 0;
+}
+
+int adaboostBitColumUpdateWeightSign1(const unsigned int *x,
+				      const unsigned int *y,
+				      const unsigned long N,
+				      const double beta,
+				      double **w){
   const size_t bitNum = 8 * sizeof(unsigned int);
   unsigned int xor_x_y;
   unsigned long ary_index;
@@ -456,7 +479,7 @@ int adaboostBitLearn(const unsigned int *y,
   *adaBeta = calloc_errchk(T, sizeof(double), "calloc adaBeta");
 
   selected = calloc_errchk(dim, sizeof(short), "calloc selected");
-  w = calloc_errchk(N, sizeof(double), "calloc w");
+  w = calloc_errchk(N + 8 * sizeof(int), sizeof(double), "calloc w");
   p = calloc_errchk(N, sizeof(double), "calloc p");
   err = calloc_errchk(dim, sizeof(double), "calloc count");
 
@@ -530,7 +553,11 @@ int adaboostBitLearn(const unsigned int *y,
     /* step 3: compute new weithgts */
     {
       (*adaBeta)[t] = epsilon / (1 - epsilon);
-      adaboostBitColumUpdateWeight(x[(*adaAxis)[t]], y, N, (*adaBeta)[t], &w);
+      if((*adaSign)[t] == 0){
+	adaboostBitColumUpdateWeightSign0(x[(*adaAxis)[t]], y, N, (*adaBeta)[t], &w);
+      }else{
+	adaboostBitColumUpdateWeightSign1(x[(*adaAxis)[t]], y, N, (*adaBeta)[t], &w);
+      }
 
 #if 0
       for(i = 0; i < N; i++){
