@@ -391,6 +391,42 @@ int constructBitTable(const int *h_i,
   return 0;
 }
 
+
+double adaboostBitColumComputeErr(const unsigned int *x,
+				  const unsigned int *y,
+				  const double *p,
+				  const unsigned long N){
+  const size_t bitNum = 8 * sizeof(unsigned int);
+  double err = 0;  
+  unsigned int xor_x_y;
+  unsigned long ary_index;
+  int bit_pos;
+
+  //for(ary_index = 0; ary_index < N / bitNum; ary_index++){
+  for(ary_index = 0; ary_index <= N / bitNum; ary_index++){
+    xor_x_y = (x[ary_index]) ^ (y[ary_index]);
+    for(bit_pos = bitNum - 1; bit_pos >= 0; bit_pos--){
+      if((xor_x_y & 1) == 1){
+	err += p[ary_index * bitNum + bit_pos];
+      }
+      xor_x_y >>= 1;
+    }
+  }
+#if 0
+  if((N % bitNum) != 0){
+    xor_x_y = (x[N / bitNum + 1]) ^ (y[N /bitNum + 1]);
+    xor_x_y >>= (bitNum - (N % bitNum));
+    for(bit_pos = (N % bitNum); bit_pos >= 0; bit_pos--){
+      if((xor_x_y & 1) == 1){
+	err += p[(N / bitNum) * bitNum + bit_pos];
+      }
+      xor_x_y >>= 1;      
+    }
+  }
+#endif
+  return err;
+}
+
 int adaboostBitLearn(const unsigned int *y,
 		     const unsigned int **x,
 		     const unsigned long T,
@@ -440,6 +476,7 @@ int adaboostBitLearn(const unsigned int *y,
 	err[d] = 0;
       }
 
+#if 0
       for(d = 0; d < dim; d++){	  
 	for(i = 0; i < N; i++){
 	  if(get_bit(x[d], i) != get_bit(y, i)){
@@ -447,6 +484,12 @@ int adaboostBitLearn(const unsigned int *y,
 	  }
 	}
       }
+#endif
+
+      for(d = 0; d < dim; d++){
+	err[d] = adaboostBitColumComputeErr(x[d], y, p, N);
+      }
+
 
       {
 	d = 0;

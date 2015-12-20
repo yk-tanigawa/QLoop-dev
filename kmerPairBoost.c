@@ -163,7 +163,7 @@ int main_sub(const char *freqFile,
       free(h_j);
     }else{
       //for(b = 0; b < nHic; b++){
-      for(b = 0; b < 1 << (4 * k); b++){
+      for(b = 0; b < (unsigned long)(1 << (4 * k)); b++){
 	free(x[b]);
       }
       free(x);
@@ -331,7 +331,7 @@ int main(int argc, char **argv){
       sprintf(outFile, "%s%s.k%d.t%f.T%ld.stamps",
 	      outDir, basename(hicFile), k, threshold, T);
     }else{
-      sprintf(outFile, "%s%s.k%d.t%f.T%ld.bit.stamps",
+      sprintf(outFile, "%s%s.k%d.t%f.T%ld.bit3.stamps",
 	      outDir, basename(hicFile), k, threshold, T);
     }
   }
