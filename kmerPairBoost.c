@@ -331,7 +331,7 @@ int main(int argc, char **argv){
       sprintf(outFile, "%s%s.k%d.t%f.T%ld.stamps",
 	      outDir, basename(hicFile), k, threshold, T);
     }else{
-      sprintf(outFile, "%s%s.k%d.t%f.T%ld.bit3.stamps",
+      sprintf(outFile, "%s%s.k%d.t%f.T%ld.bit4.stamps",
 	      outDir, basename(hicFile), k, threshold, T);
     }
   }

@@ -209,7 +209,7 @@ int constructBitTable(const int *h_i,
     buf = 0;
     for(l = 0; l < nkmers; l++){
       for(m = 0; m < nkmers; m++){
-	buf = buf << 1;
+	buf <<= 1;
 	buf += (((kmerFreq[h_i[n]][l] * kmerFreq[h_j[n]][m]) > 0) ? 1 : 0);
 	if((lm % intBits) == (intBits - 1)){
 	  (*x)[n][lm / intBits] = buf;
@@ -373,7 +373,7 @@ int constructBitTable(const int *h_i,
     for(m = 0; m < nkmers; m++){
       buf = 0;
       for(n = 0; n < nHic; n++){
-	buf = buf << 1;
+	buf <<= 1;
 	buf += (((kmerFreq[h_i[n]][l] * kmerFreq[h_j[n]][m]) > 0) ? 1 : 0);
 	if((n % intBits) == (intBits - 1)){
 	  (*x)[lm][n / intBits] = buf;
@@ -381,7 +381,7 @@ int constructBitTable(const int *h_i,
 	}
       }
       if((nHic % intBits) != 0){
-	buf = (buf << (intBits - (nHic % intBits)));
+	buf <<= (intBits - (nHic % intBits));
 	(*x)[lm][nHic / intBits] = buf;
       }
       lm++;
@@ -390,7 +390,6 @@ int constructBitTable(const int *h_i,
   
   return 0;
 }
-
 
 double adaboostBitColumComputeErr(const unsigned int *x,
 				  const unsigned int *y,
@@ -401,10 +400,10 @@ double adaboostBitColumComputeErr(const unsigned int *x,
   unsigned int xor_x_y;
   unsigned long ary_index;
   int bit_pos;
-
-  //for(ary_index = 0; ary_index < N / bitNum; ary_index++){
   for(ary_index = 0; ary_index <= N / bitNum; ary_index++){
     xor_x_y = (x[ary_index]) ^ (y[ary_index]);
+    /* XOR operation works as a true-false test of a
+     * weak learner x[] */
     for(bit_pos = bitNum - 1; bit_pos >= 0; bit_pos--){
       if((xor_x_y & 1) == 1){
 	err += p[ary_index * bitNum + bit_pos];
@@ -412,20 +411,32 @@ double adaboostBitColumComputeErr(const unsigned int *x,
       xor_x_y >>= 1;
     }
   }
-#if 0
-  if((N % bitNum) != 0){
-    xor_x_y = (x[N / bitNum + 1]) ^ (y[N /bitNum + 1]);
-    xor_x_y >>= (bitNum - (N % bitNum));
-    for(bit_pos = (N % bitNum); bit_pos >= 0; bit_pos--){
-      if((xor_x_y & 1) == 1){
-	err += p[(N / bitNum) * bitNum + bit_pos];
-      }
-      xor_x_y >>= 1;      
-    }
-  }
-#endif
   return err;
 }
+
+int adaboostBitColumUpdateWeight(const unsigned int *x,
+				 const unsigned int *y,
+				 const unsigned long N,
+				 const double beta,
+				 double **w){
+  const size_t bitNum = 8 * sizeof(unsigned int);
+  unsigned int xor_x_y;
+  unsigned long ary_index;
+  int bit_pos;
+  for(ary_index = 0; ary_index <= N / bitNum; ary_index++){
+    xor_x_y = (x[ary_index]) ^ (y[ary_index]);
+    /* XOR operation works as a true-false test of a
+     * weak learner x[] */
+    for(bit_pos = bitNum - 1; bit_pos >= 0; bit_pos--){
+      if((xor_x_y & 1) == 1){
+	(*w)[ary_index * bitNum + bit_pos] *= beta;
+      }
+      xor_x_y >>= 1;
+    }
+  }
+  return 0;
+}
+
 
 int adaboostBitLearn(const unsigned int *y,
 		     const unsigned int **x,
@@ -473,23 +484,8 @@ int adaboostBitLearn(const unsigned int *y,
     /* step 2 : find the most appropriate axis (weak lerner) */
     {
       for(d = 0; d < dim; d++){
-	err[d] = 0;
-      }
-
-#if 0
-      for(d = 0; d < dim; d++){	  
-	for(i = 0; i < N; i++){
-	  if(get_bit(x[d], i) != get_bit(y, i)){
-	    err[d] += p[i];
-	  }
-	}
-      }
-#endif
-
-      for(d = 0; d < dim; d++){
 	err[d] = adaboostBitColumComputeErr(x[d], y, p, N);
       }
-
 
       {
 	d = 0;
@@ -534,12 +530,16 @@ int adaboostBitLearn(const unsigned int *y,
     /* step 3: compute new weithgts */
     {
       (*adaBeta)[t] = epsilon / (1 - epsilon);
+      adaboostBitColumUpdateWeight(x[(*adaAxis)[t]], y, N, (*adaBeta)[t], &w);
+
+#if 0
       for(i = 0; i < N; i++){
 	if(((*adaSign)[t] == 0 && get_bit(x[(*adaAxis)[t]], i) == get_bit(y, i)) ||
 	   ((*adaSign)[t] == 1 && get_bit(x[(*adaAxis)[t]], i) != get_bit(y, i))){
 	  w[i] *= (*adaBeta)[t];
 	}
       }
+#endif
     }
     
     gettimeofday(&time, NULL);
