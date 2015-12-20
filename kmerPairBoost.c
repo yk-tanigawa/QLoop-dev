@@ -162,7 +162,8 @@ int main_sub(const char *freqFile,
       free(h_i);
       free(h_j);
     }else{
-      for(b = 0; b < nHic; b++){
+      //for(b = 0; b < nHic; b++){
+      for(b = 0; b < 1 << (4 * k); b++){
 	free(x[b]);
       }
       free(x);
