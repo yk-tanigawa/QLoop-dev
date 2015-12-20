@@ -10,30 +10,107 @@
 #include <getopt.h>
 #include <libgen.h>
 
-#include "adaboost.h"
 #include "calloc_errchk.h"
 #include "io.h"
 
 #define F_NAME_LEN 128
 #define BUF_SIZE 4096
 
+int readVectorInt(const char *file,
+		 int **vector,
+		 unsigned long *nrow){
+  FILE *fp;
+  char buf[BUF_SIZE];
+  unsigned long row = 0;
+
+  *nrow = wc(file);
+  
+  *vector = calloc_errchk(sizeof(int), *nrow, "calloc vector");
+
+  {
+    if((fp = fopen(file, "r")) == NULL){
+      fprintf(stderr, "error: fopen %s\n%s\n",
+	      file, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+    
+    while(fgets(buf, BUF_SIZE, fp)){
+      (*vector)[row++] = atoi(buf);
+    }
+  
+    fclose(fp);
+  }
+
+  return 0;
+}
+
+int set_lm(const int *lm,
+	   const unsigned long num,
+	   const int k,
+	   int **l,
+	   int **m){
+  const int nkmer = 1 << (2 * k);
+  unsigned long i;
+  
+  *l = calloc_errchk(num, sizeof(int), "calloc l");
+  *m = calloc_errchk(num, sizeof(int), "calloc m");
+  
+  for(i = 0; i < num; i++){
+    (*l)[i] = lm[i] % nkmer;
+    (*m)[i] = lm[i] / nkmer;
+  }
+  return 0;
+}
+
+int dumpResultsQP_q(FILE *fp,
+		    const double *q, 
+		    const unsigned long nkp){
+  unsigned int i;
+  for(i = 0; i < nkp; i++){
+    fprintf(fp, "%e\n", q[i]);
+  }
+  return 0;
+}
+
+int dumpResultsQP_P(FILE *fp,
+		    const double **P, 
+		    const unsigned long nkp){
+  unsigned int i, j;
+  for(i = 0; i < nkp; i++){
+    for(j = 0; j < nkp; j++){
+      fprintf(fp, "%e\t", P[i][j]);
+    }
+    fprintf(fp, "\n");
+  }
+  return 0;
+}
+
+
 int main_sub(const char *freqFile,
 	     const char *hicFile,
+	     const char *kmerPairFile,
 	     const int k,
 	     const int res,
-	     const double threshold,
-	     const unsigned long T,
-	     const char *outFile,
-	     const int bitmode){
+	     const char *outDir){
 
   int **kmerFreq;
-  unsigned long nBin, b;
+  unsigned long nBin;
 
   int *h_i, *h_j;
   double *h_mij;
   unsigned long nHic;
+  
+  int *kp_lm, *kp_l, *kp_m;
+  unsigned long nkp;
 
-  FILE *fp;
+  double **P, *q;
+  int *pairFreq;
+
+  unsigned long b, n, lm, l, m;
+
+  char outFileP[F_NAME_LEN], outFileq[F_NAME_LEN];
+
+  FILE *fpP, *fpq;
 
 
   /* generate data on the fly mode */
@@ -41,39 +118,77 @@ int main_sub(const char *freqFile,
   {
     readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
     readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
+    readVectorInt(kmerPairFile, &kp_lm, &nkp);
+    set_lm(kp_lm, nkp, k, &kp_l, &kp_m);
   }
   
-  /* execute summation */
-  {
 #if 0
-    adaboostLearn((const unsigned int *)y, 
-		  (const int *)h_i, (const int*)h_j, 
-		  (const int **)kmerFreq, 
-		  k, T, (const unsigned long)nHic, 
-		  1 << (4 * k),
-		  &adaAxis, &adaSign, &adaBeta);
+  for(b = 0; b < nkp; b++){
+    printf("%d\t", kp_lm[b]);
+  }
+  printf("\n");
 #endif
+
+  /* execute summation */  
+  {
+    P = calloc_errchk(nkp, sizeof(double *), "calloc P");
+    for(b = 0; b < nkp; b++){
+      P[b] = calloc_errchk(nkp, sizeof(double), "calloc P[]");
+    }    
+    q = calloc_errchk(nkp, sizeof(double), "calloc q");
+    pairFreq = calloc_errchk(nkp, sizeof(int), "calloc pairFreq");
+
+    for(n = 0; n < nHic; n++){
+      for(lm = 0; lm < nkp; lm++){
+	pairFreq[lm] = kmerFreq[h_i[n]][kp_l[lm]] * kmerFreq[h_j[n]][kp_m[lm]];
+      }
+      for(l = 0; l < nkp; l++){
+	for(m = 0; m < nkp; m++){
+	  P[l][m] += pairFreq[l] * pairFreq[m];
+	}
+      }
+      for(lm = 0; lm < nkp; lm++){
+	q[lm] -= h_mij[n] * pairFreq[lm];
+      }
+    }
+
   }
 
   /* write or show the results */
   {
-#if 0
-    if(outFile == NULL){
-      dump_results(stderr, adaAxis, adaSign, adaBeta, T, k);
+    if(outDir == NULL){
+      dumpResultsQP_P(stderr, (const double **)P, nkp);
+      dumpResultsQP_q(stderr, (const double *)q, nkp);
     }else{
-      if((fp = fopen(outFile, "w")) == NULL){
+      sprintf(outFileP, "%sP%ld.dat", outDir, nkp);
+      sprintf(outFileq, "%sq%ld.dat", outDir, nkp);
+
+
+      if((fpP = fopen(outFileP, "w")) == NULL){
 	fprintf(stderr, "error: fdopen %s\n%s\n",
-		outFile, strerror(errno));
+		outFileP, strerror(errno));
 	exit(EXIT_FAILURE);
       }
       
-      fprintf(stderr, "Writing results to : %s\n", outFile);
+      fprintf(stderr, "Writing results to : %s\n", outFileP);
       
-      dump_results(fp, adaAxis, adaSign, adaBeta, T, k);
+      dumpResultsQP_P(fpP, (const double **)P, nkp);
       
-      fclose(fp);
+      fclose(fpP);
+
+      if((fpq = fopen(outFileq, "w")) == NULL){
+	fprintf(stderr, "error: fdopen %s\n%s\n",
+		outFileq, strerror(errno));
+	exit(EXIT_FAILURE);
+      }
+      
+      fprintf(stderr, "Writing results to : %s\n", outFileq);
+      
+      dumpResultsQP_q(fpq, (const double *)q, nkp);
+      
+      fclose(fpq);
+
     }
-#endif
   }
 
 #if 0
@@ -90,26 +205,23 @@ int main_sub(const char *freqFile,
 
 int show_usage(const char *progName){
   printf("usage:\n\n");
-  printf("example: %s -f %s -H %s -k %d -r %d, -t %f -T %ld -o %s\n", 
+  printf("example: %s -f %s -H %s -p %s -k %d -r %d -o %s\n", 
 	 progName,
 	 "./data/hoge.dat",
 	 "./data/hic.dat",
+	 "./data/kmerpairfile",
 	 5,
 	 1000,
-	 10.0,
-	 10L,
 	 "./data/");
   return 0;
 }
 
 int check_params(const char *freqFile,
 		 const char *hicFile,
+		 const char *kmerPairFile,
 		 const int k,
 		 const int res,
-		 const double threshold,
-		 const unsigned long T,
 		 const char *outDir,
-		 const int bitmode,
 		 const char *progName){
   int errflag = 0;
 
@@ -124,8 +236,16 @@ int check_params(const char *freqFile,
     fprintf(stderr, "[ERROR] Hi-C data directory is not specified\n");
     errflag++;
   }else if(errflag == 0){
-    printf("  Hi-C data dir: %s\n", hicFile);
+    printf("  Hi-C data: %s\n", hicFile);
   }
+
+  if(kmerPairFile == NULL){
+    fprintf(stderr, "[ERROR] kmerPairFile is not specified\n");
+    errflag++;
+  }else if(errflag == 0){
+    printf("  k-mer pair file: %s\n", kmerPairFile);
+  }
+
 
   if(k <= 0){
     fprintf(stderr, "[ERROR] k is not specified\n");
@@ -141,32 +261,11 @@ int check_params(const char *freqFile,
     printf("  resolution: %d\n", res);
   }
 
-  if(threshold <= 0){
-    fprintf(stderr, "[ERROR] threshold is not specified\n");
-    errflag++;
-  }else if(errflag == 0){
-    printf("  threshold: %e\n", threshold);
-  }
-
-  if(T <= 0){
-    fprintf(stderr, "[ERROR] number of weak lerners is not specified\n");
-    errflag++;
-  }else if((unsigned long)(1 << (4 * k)) < T){
-    fprintf(stderr, "[ERROR] number of weak lerners(T = %ld) exceeds 16^k (%d)\n", T, 1 << (4 * k));
-    errflag++;
-  }else if(errflag == 0){
-    printf("  num. of weak lerners: %ld\n", T);
-  }
-
   if(outDir == NULL){
     fprintf(stderr, "[WARNING] output directory is not specified\n");
     fprintf(stderr, "          results will be written to stderr\n");
   }else if(errflag == 0){
     printf("  Output dir:    %s\n", outDir);
-  }
-
-  if(bitmode != 0 && errflag == 0){
-    printf("  [INFO] bitmode\n");
   }
 
   if(errflag > 0){
@@ -178,10 +277,8 @@ int check_params(const char *freqFile,
 }
 
 int main(int argc, char **argv){
-  char *freqFile = NULL, *hicFile = NULL, *outDir = NULL, *outFile = NULL;
-  int k = 0, res = 0, bitmode = 0;
-  unsigned long T = 0;
-  double threshold = 0;
+  char *freqFile = NULL, *hicFile = NULL, *kmerPairFile = NULL, *outDir = NULL;
+  int k = 0, res = 0;
 
   int opt = 0, opt_idx = 0;
   struct option long_opts[] = {
@@ -190,16 +287,14 @@ int main(int argc, char **argv){
     /* options */
     {"frequency", required_argument, NULL, 'f'},
     {"hic",       required_argument, NULL, 'H'},
+    {"kmerpair",  required_argument, NULL, 'p'},
     {"k",         required_argument, NULL, 'k'},
     {"res",       required_argument, NULL, 'r'},
-    {"threshold", required_argument, NULL, 't'},
-    {"T",         required_argument, NULL, 'T'},
     {"out",       required_argument, NULL, 'o'},
-    {"bitmode",   no_argument,       NULL, 'b'},
     {0, 0, 0, 0}
   };
 
-  while((opt = getopt_long(argc, argv, "hvf:H:k:r:t:T:o:b",
+  while((opt = getopt_long(argc, argv, "hvf:H:p:k:r:o:",
 			   long_opts, &opt_idx)) != -1){
     switch (opt){
       case 'h': /* help */
@@ -214,29 +309,24 @@ int main(int argc, char **argv){
       case 'H': /* hic */
 	hicFile = optarg;
 	break;
+      case 'p': /* kmerpair */
+	kmerPairFile = optarg;
+	break;
       case 'k': /* k */
 	k = atoi(optarg);
 	break;
       case 'r': /* res */
 	res = atoi(optarg);
 	break;
-      case 't': /* threshold */
-	threshold = atof(optarg);
-	break;
-      case 'T': /* T */
-	T = atol(optarg);
-	break;
       case 'o': /* out */
 	outDir = optarg;
-	break;
-      case 'b': /* bitmode */
-	bitmode = 1;
 	break;
     }
   }
 
-  check_params(freqFile, hicFile, k, res, threshold, T, outDir, bitmode, argv[0]);
+  check_params(freqFile, hicFile, kmerPairFile, k, res, outDir, argv[0]);
 
+#if 0
   if(outDir != NULL){
     outFile = calloc_errchk(F_NAME_LEN, sizeof(char), "calloc outFile");
     if(bitmode == 0){
@@ -247,8 +337,8 @@ int main(int argc, char **argv){
 	      outDir, basename(hicFile), k, threshold, T);
     }
   }
-
-  main_sub(freqFile, hicFile, k, res, threshold, T, outFile, bitmode);
+#endif
+  main_sub(freqFile, hicFile, kmerPairFile, k, res, outDir);
  
   return 0;
 }
