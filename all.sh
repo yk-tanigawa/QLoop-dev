@@ -4,8 +4,7 @@ cat $0
 DIR="/work2/yt/ChromLoopC"
 cd ${DIR}
 
-make clean
-make QPprep kmerPairBoost
+prog_version="20151221"
 
 percentile=0.5
 norm="KR"
@@ -20,22 +19,26 @@ chr=21
 BoostMode=""
 
 HiCdataFile=${DIR}/data/chr${chr}.m${m}.M${M}.${norm}.${exp}.dat
-BoostFile=${HiCdataFile}.k${k}.t${threshold}.T${T}${BoostMode}.stamps
+BoostFile=${DIR}/data/${prog_version}/chr${chr}.m${m}.M${M}.${norm}.${exp}.dat.k${k}.t${threshold}.T${T}${BoostMode}.stamps
 kmerPairFile=${BoostFile}.kmerpair
 QPfileP=${kmerPairFile}.P${T}.dat
 QPfileq=${kmerPairFile}.q${T}.dat
 QPfileOut=${kmerPairFile}.qpout
 
+git checkout v${prog_version}
+make clean
+make QPprep kmerPairBoost
+
 threshold=`./hist.sh ${HiCdataFile}|awk -v percentile="${percentile}"'{if($1 == percentile) print $2}'`
 
 ${DIR}/kmerPairBoost \
     -f ${DIR}/data/k${k}.res${res}.chr${chr}.dat \
-    -H ${DIR}/data/chr${chr}.m${m}.M${M}.${norm}.${exp}.dat \
+    -H ${HiCdataFile} \
     -k${k} \
     -r${res} \
     -T${T} \
     -t${threshold} \
-    -o ${DIR}/data/ 
+    -o ${DIR}/data/${prog_version}
 
 cat ${BoostFile} |awk '{print $4}' > ${kmerPairFile}
 
@@ -45,7 +48,7 @@ ${DIR}/QPprep \
     --kmerpair ${KmerPairFile} \
     -k ${k} \
     --res ${res} \
-    --out ${DIR}/data/ \
+    --out ${DIR}/data/${prog_version}
 
 /work2/yt/QuadProg-example/QPwithFile ${QPfileP} ${QPfileq} ${T} > ${QPfileOut}
 
