@@ -153,10 +153,10 @@ int main_sub(const char *freqFile,
       dumpResultsQP_P(stderr, (const double **)P, nkp);
       dumpResultsQP_q(stderr, (const double *)q, nkp);
     }else{
-      sprintf(outFile, "%s%s.P%ld.dat",
-	      outDir, basename(kmerPairFile), nkp);
-      sprintf(outFile, "%s%s.q%ld.dat",
-	      outDir, basename(kmerPairFile), nkp);
+      sprintf(outFileP, "%s%s.P%ld.dat",
+	      outDir, basename((char *)kmerPairFile), nkp);
+      sprintf(outFileq, "%s%s.q%ld.dat",
+	      outDir, basename((char *)kmerPairFile), nkp);
 
       if((fpP = fopen(outFileP, "w")) == NULL){
 	fprintf(stderr, "error: fdopen %s\n%s\n",
