@@ -29,7 +29,7 @@ git checkout v${prog_version}
 make clean
 make QPprep kmerPairBoost
 
-threshold=`./hist.sh ${HiCdataFile}|awk -v percentile="${percentile}"'{if($1 == percentile) print $2}'`
+threshold=`./hist.sh ${HiCdataFile}|awk -v percentile="${percentile}" '{if($1 == percentile) print $2}'`
 
 ${DIR}/kmerPairBoost \
     -f ${DIR}/data/k${k}.res${res}.chr${chr}.dat \
