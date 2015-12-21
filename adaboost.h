@@ -32,17 +32,17 @@ inline unsigned short adaDataOnTheFlyAxis(const int h_i,
 }
 
 
-int adaboostLearn(const unsigned int *y,
-		  const int *h_i,
-		  const int *h_j,
-		  const int **kmerFreq,
-		  const int k,
-		  const unsigned long T,
-		  const unsigned long N,
-		  const unsigned long dim,
-		  unsigned long **adaAxis,
-		  int **adaSign,
-		  double **adaBeta){
+int adaboostLearnOnTheFly(const unsigned int *y,
+			  const int *h_i,
+			  const int *h_j,
+			  const int **kmerFreq,
+			  const int k,
+			  const unsigned long T,
+			  const unsigned long N,
+			  const unsigned long dim,
+			  unsigned long **adaAxis,
+			  int **adaSign,
+			  double **adaBeta){
   short *selected;
   unsigned short *x, xaxis;
   double *w, *p, *err, wsum, epsilon, min, max;
@@ -148,7 +148,7 @@ int adaboostLearn(const unsigned int *y,
       }
     }
     
-  gettimeofday(&time, NULL);
+    gettimeofday(&time, NULL);
     
     fprintf(stderr, "%ld\t%e\t(%ld, %d)\t%e\t%e\n",
 	    t, (*adaBeta)[t], (*adaAxis)[t], (*adaSign)[t],
@@ -165,32 +165,14 @@ int adaboostLearn(const unsigned int *y,
   return 0;
 }
 
-#if 0
-inline void adaDataOnTheFly(const int h_i,
-			    const int h_j,
-			    const int **kmerFreq,
-			    const int k,
-			    short *x){
-  const unsigned long nkmers = 1 << (2 * k);
-  unsigned long l, m;
-  for(l = 0; l < nkmers; l++){
-    for(m = 0; m < nkmers; m++){
-      x[l * nkmers + m] = (((kmerFreq[h_i][l] * kmerFreq[h_j][m]) > 0) ? 1 : 0);
-    }
-  }   
-  return;
-}
-#endif
+/* ada boost : bit mode ; row oriented database mode */
 
-#if 0
-/* ada boost : bit mode */
-
-int constructBitTable(const int *h_i, 
-		      const int *h_j, 
-		      const int **kmerFreq,
-		      const unsigned long nHic, 
-		      const int k,
-		      unsigned int ***x){
+int constructBitTableRow(const int *h_i, 
+			 const int *h_j, 
+			 const int **kmerFreq,
+			 const unsigned long nHic, 
+			 const int k,
+			 unsigned int ***x){
   const unsigned long nkmers = 1 << (2 * k);
   const unsigned long nkmerpairs = 1 << (4 * k);
   const size_t intBits = 8 * sizeof(unsigned int);
@@ -223,14 +205,14 @@ int constructBitTable(const int *h_i,
   return 0;
 }
 
-int adaboostBitLearn(const unsigned int *y,
-		     const unsigned int **x,
-		     const unsigned long T,
-		     const unsigned long N,
-		     const unsigned long dim,
-		     unsigned long **adaAxis,
-		     int **adaSign,
-		     double **adaBeta){
+int adaboostBitLearnRow(const unsigned int *y,
+			const unsigned int **x,
+			const unsigned long T,
+			const unsigned long N,
+			const unsigned long dim,
+			unsigned long **adaAxis,
+			int **adaSign,
+			double **adaBeta){
   short *selected;
   double *w, *p, *err, wsum, epsilon, min, max;
   unsigned long t, i, d, argmind, argmaxd;
@@ -330,8 +312,8 @@ int adaboostBitLearn(const unsigned int *y,
       }
     }
     
-  gettimeofday(&time, NULL);
-    
+    gettimeofday(&time, NULL);
+  
     fprintf(stderr, "%ld\t%e\t(%ld, %d)\t%e\t%e\n",
 	    t, (*adaBeta)[t], (*adaAxis)[t], (*adaSign)[t],
 	    diffSec(timePrev, time), diffSec(timeStart, time));	       
@@ -345,16 +327,15 @@ int adaboostBitLearn(const unsigned int *y,
   free(err);
   return 0;
 }
-#endif
 
-/* ada boost : bit mode ver2 */
+/* ada boost : bit mode ; column oriented database  */
 
-int constructBitTable(const int *h_i, 
-		      const int *h_j, 
-		      const int **kmerFreq,
-		      const unsigned long nHic, 
-		      const int k,
-		      unsigned int ***x){
+int constructBitTableColumn(const int *h_i, 
+			    const int *h_j, 
+			    const int **kmerFreq,
+			    const unsigned long nHic, 
+			    const int k,
+			    unsigned int ***x){
   const unsigned long nkmers = 1 << (2 * k);
   const unsigned long nkmerpairs = 1 << (4 * k);
   const size_t intBits = 8 * sizeof(unsigned int);
@@ -461,14 +442,14 @@ int adaboostBitColumUpdateWeightSign1(const unsigned int *x,
 }
 
 
-int adaboostBitLearn(const unsigned int *y,
-		     const unsigned int **x,
-		     const unsigned long T,
-		     const unsigned long N,
-		     const unsigned long dim,
-		     unsigned long **adaAxis,
-		     int **adaSign,
-		     double **adaBeta){
+int adaboostBitLearnColumn(const unsigned int *y,
+			   const unsigned int **x,
+			   const unsigned long T,
+			   const unsigned long N,
+			   const unsigned long dim,
+			   unsigned long **adaAxis,
+			   int **adaSign,
+			   double **adaBeta){
   short *selected;
   double *w, *p, *err, wsum, epsilon, min, max;
   unsigned long t, i, d, argmind, argmaxd;
@@ -558,15 +539,6 @@ int adaboostBitLearn(const unsigned int *y,
       }else{
 	adaboostBitColumUpdateWeightSign1(x[(*adaAxis)[t]], y, N, (*adaBeta)[t], &w);
       }
-
-#if 0
-      for(i = 0; i < N; i++){
-	if(((*adaSign)[t] == 0 && get_bit(x[(*adaAxis)[t]], i) == get_bit(y, i)) ||
-	   ((*adaSign)[t] == 1 && get_bit(x[(*adaAxis)[t]], i) != get_bit(y, i))){
-	  w[i] *= (*adaBeta)[t];
-	}
-      }
-#endif
     }
     
     gettimeofday(&time, NULL);

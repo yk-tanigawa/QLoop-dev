@@ -17,7 +17,6 @@
 #define F_NAME_LEN 128
 #define BUF_SIZE 4096
 
-#if 0
 int binarization(const double *source,
 		 const double threshold,
 		 const unsigned long length,
@@ -29,9 +28,8 @@ int binarization(const double *source,
   }
   return 0;
 }
-#endif
 
-int binarization(const double *source,
+int binarizationBit(const double *source,
 		 const double threshold,
 		 const unsigned long length,
 		 unsigned int **target){
@@ -94,12 +92,12 @@ int main_sub(const char *freqFile,
 
     /* execute adaboost */
     {
-      adaboostLearn((const unsigned int *)y, 
-		    (const int *)h_i, (const int*)h_j, 
-		    (const int **)kmerFreq, 
-		    k, T, (const unsigned long)nHic, 
-		    1 << (4 * k),
-		    &adaAxis, &adaSign, &adaBeta);
+      adaboostLearnOnTheFly((const unsigned int *)y, 
+			    (const int *)h_i, (const int*)h_j, 
+			    (const int **)kmerFreq, 
+			    k, T, (const unsigned long)nHic, 
+			    1 << (4 * k),
+			    &adaAxis, &adaSign, &adaBeta);
     }
   }else{
     /* bitmode */
@@ -108,11 +106,11 @@ int main_sub(const char *freqFile,
       readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
       readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
 
-      binarization(h_mij, threshold, nHic, &y);
-      constructBitTable((const int *)h_i, (const int*)h_j, 			
-			(const int **)kmerFreq, 
-			(const unsigned long)nHic, k,
-			&x);
+      binarizationBit(h_mij, threshold, nHic, &y);
+      constructBitTableColumn((const int *)h_i, (const int*)h_j, 			
+			      (const int **)kmerFreq, 
+			      (const unsigned long)nHic, k,
+			      &x);
 
       for(b = 0; b < nBin; b++){
 	free(kmerFreq[b]);
@@ -125,11 +123,11 @@ int main_sub(const char *freqFile,
 
     /* execute adaboost */
     {
-      adaboostBitLearn((const unsigned int *)y, 
-		       (const unsigned int **)x,
-		       T, (const unsigned long)nHic, 
-		       1 << (4 * k),
-		       &adaAxis, &adaSign, &adaBeta);
+      adaboostBitLearnColumn((const unsigned int *)y, 
+			     (const unsigned int **)x,
+			     T, (const unsigned long)nHic, 
+			     1 << (4 * k),
+			     &adaAxis, &adaSign, &adaBeta);
     }
   }
 
