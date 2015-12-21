@@ -122,13 +122,6 @@ int main_sub(const char *freqFile,
     set_lm(kp_lm, nkp, k, &kp_l, &kp_m);
   }
   
-#if 0
-  for(b = 0; b < nkp; b++){
-    printf("%d\t", kp_lm[b]);
-  }
-  printf("\n");
-#endif
-
   /* execute summation */  
   {
     P = calloc_errchk(nkp, sizeof(double *), "calloc P");
@@ -191,15 +184,28 @@ int main_sub(const char *freqFile,
     }
   }
 
-#if 0
   /* free memory */
   {
-    free(y);
-    free(adaAxis);
-    free(adaSign);
-    free(adaBeta);
+    for(b = 0; b < nBin; b++){
+      if(kmerFreq[b] != NULL){
+	free(kmerFreq[b]);
+      }
+    }
+    free(kmerFreq);
+    free(h_i);
+    free(h_j);
+    free(h_mij);
+    free(kp_lm);
+    free(kp_l);
+    free(kp_m);
+    for(b = 0; b < nkp; b++){
+      free(P[b]);
+    }
+    free(P);
+    free(q);
+    free(pairFreq);
   }
-#endif
+
   return 0;
 }
 
