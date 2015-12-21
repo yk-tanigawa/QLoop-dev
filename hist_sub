@@ -10,8 +10,8 @@ sub by_number {
 
 @data = sort by_number @data;
 
-for((1..10)){
-    my $frac = 0.1 * $_;
+for((1..20)){
+    my $frac = 0.05 * $_;
     print "$frac\t";
     print "$data[$frac * $#data]\n";
 }
