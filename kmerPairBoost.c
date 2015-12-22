@@ -265,6 +265,8 @@ int check_params(const char *freqFile,
   return 0;
 }
 
+
+#if 0
 int main(int argc, char **argv){
   char *freqFile = NULL, *hicFile = NULL, *outDir = NULL, *outFile = NULL;
   int k = 0, res = 0, bitmode = 0;
@@ -338,5 +340,36 @@ int main(int argc, char **argv){
 
   main_sub(freqFile, hicFile, k, res, threshold, T, outFile, bitmode);
  
+  return 0;
+}
+#endif
+
+
+long revComp(long kmer, 
+	     const int k){
+  long revComp = 0;
+  kmer = ((~kmer) & ((1 << (2 * k)) - 1));
+  int i;
+  for(i = 0; i <  k; i++){
+    revComp <<= 2;
+    revComp += (kmer & 3);
+    kmer >>= 2;
+  }
+  return revComp;
+}
+
+
+int main(void){
+  int k = 3;
+  long i = 0;
+  char **kmerStrings;
+
+  setKmerStrings(k, &kmerStrings);
+  
+  for(i = 0; i < (1 << (2 * k)); i++){
+    printf("%s\t", kmerStrings[i]);
+    printf("%s\n", kmerStrings[revComp(i, k)]);
+  }
+
   return 0;
 }
