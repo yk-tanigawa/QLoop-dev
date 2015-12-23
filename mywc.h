@@ -3,16 +3,15 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
-#define BUF_SIZE 4096
+#include "constant.h"
 
 /**
  * wc -l
  */
-long mywc(const char *fName){
-  long lines = 0;
+unsigned long mywc(const char *fName){
+  unsigned long lines = 0;
   FILE* fp;
-  char buf[BUF_SIZE];
+  char buf[MYWC_BUF_SIZE];
   
   if((fp = fopen(fName, "r")) == NULL){
     fprintf(stderr, "error: fdopen %s\n%s\n",

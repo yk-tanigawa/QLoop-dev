@@ -11,6 +11,8 @@
 #include <libgen.h>
 
 #include "calloc_errchk.h"
+#include "hic.h"
+
 
 typedef struct _command_line_arguements {
   /* parameters */
@@ -25,7 +27,7 @@ typedef struct _command_line_arguements {
   char *exp;
   /* input */
   char *fasta_file;
-  char *hicRaw_file;
+  char *hicRaw_dir;
   char *kmerFreq_file;
   char *hic_file;
   char *boost_oracle_file;
@@ -69,28 +71,28 @@ int check_args(const command_line_arguements *args,
     show_error(stderr, prog_name, "k is not specified");
     errflag++;
   }else if(errflag == 0){
-    printf("  k: %d\n", args->k);
+    fprintf(stderr, "%s: Info: k: %d\n", prog_name, args->k);
   }
 
   if(args->res <= 0){
     show_error(stderr, prog_name, "resolution is not specified");
     errflag++;
   }else if(errflag == 0){
-    printf("  resolution: %d\n", args->res);
+    fprintf(stderr, "%s: Info: resolution: %d\n", prog_name, args->res);
   }
 
   if(args->min_size <= 0){
     show_error(stderr, prog_name, "minimum size is not specified");
     errflag++;
   }else if(errflag == 0){
-    printf("  minimum size: %d\n", args->min_size);
+    fprintf(stderr, "%s: Info: minimum size: %d\n", prog_name, args->min_size);
   }
 
   if(args->max_size <= 0){
     show_error(stderr, prog_name, "maximum size is not specified");
     errflag++;
   }else if(errflag == 0){
-    printf("  maximum size: %d\n", args->max_size);
+    fprintf(stderr, "%s: Info: maximum size: %d\n", prog_name, args->max_size);
   }
 
   if(args->iteration_num <= 0){
@@ -102,21 +104,49 @@ int check_args(const command_line_arguements *args,
 	    args->iteration_num, 1 << (4 * args->k));
     errflag++;
   }else if(errflag == 0){
-    printf("  num. of weak lerners: %ld\n", args->iteration_num);
+    fprintf(stderr, "%s: Info: number of iterations in AdaBoost: %ld\n",
+	    prog_name, args->iteration_num);
   }
 
   if(args->percentile <= 0){
     show_error(stderr, prog_name, "percentile threshold is not specified");
     errflag++;
   }else if(errflag == 0){
-    printf("  percentile threshold: %e\n", args->percentile);
+    fprintf(stderr, "%s: Info: percentile threshold: %e\n",
+	    prog_name, args->percentile);
+  }
+
+  if(args->fasta_file != NULL){
+    fprintf(stderr, "%s: Info: fasta file: %s\n",
+	    prog_name, args->fasta_file);
+  }
+
+  if(args->hicRaw_dir != NULL){
+    fprintf(stderr, "%s: Info: Hi-C raw data directory: %s/\n", 
+	    prog_name, args->hicRaw_dir);
+  }
+
+  if(args->kmerFreq_file != NULL){
+    fprintf(stderr, "%s: Info: k-mer frequency count file: %s\n", 
+	    prog_name, args->kmerFreq_file);
+  }
+
+  if(args->hic_file != NULL){
+    fprintf(stderr, "%s: Info: pre-processed Hi-C file: %s\n",
+	    prog_name, args->hic_file);
+  }
+
+  if(args->boost_oracle_file != NULL){
+    fprintf(stderr, "%s: Info: oracle file for AdaBoost: %s\n",
+	    prog_name, args->boost_oracle_file);
   }
 
   if(args->output_dir == NULL){
     show_warning(stderr, prog_name, "output directory is not specified");
     show_warning(stderr, prog_name, "results will be written to stdout");
   }else if(errflag == 0){
-    printf("  Output dir:    %s\n", args->output_dir);
+    fprintf(stderr, "%s: Info: output dir: %s/\n", 
+	    prog_name, args->output_dir);
   }
 
   if(errflag > 0){
@@ -202,7 +232,10 @@ int main(int argc, char **argv){
 	args->fasta_file = optarg;
 	break;
       case 'R': /* hicRaw */
-	args->hicRaw_file = optarg;
+	args->hicRaw_dir = optarg;
+	if((args->hicRaw_dir)[strlen(args->hicRaw_dir) - 1] == '/'){
+	  (args->hicRaw_dir)[strlen(args->hicRaw_dir) - 1] = '\0';
+	}
 	break;
       case 'f': /* kmerFreq */
 	args->kmerFreq_file = optarg;
@@ -216,6 +249,9 @@ int main(int argc, char **argv){
       /* output */
       case 'o': /* out */
 	args->output_dir = optarg;
+	if((args->output_dir)[strlen(args->output_dir) - 1] == '/'){
+	  (args->output_dir)[strlen(args->output_dir) - 1] = '\0';
+	}
 	break;
       /* exec_mode */
       case 'q': /* quite */

@@ -1,5 +1,5 @@
-#ifndef __IO_KMERFREQ_H_
-#define __IO_KMERFREQ_H_
+#ifndef __IO_FREQ_H_
+#define __IO_FREQ_H_
 
 #include <stdlib.h>
 #include <stdio.h>
