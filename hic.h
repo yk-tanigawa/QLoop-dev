@@ -18,6 +18,7 @@
 typedef struct _hic {
   unsigned long nrow;
   unsigned int res;
+  unsigned int *invalid;
   unsigned int *i;
   unsigned int *j;
   double *mij;
@@ -37,6 +38,9 @@ typedef struct _hic_prep_thread_args{
   int thread_id;
   unsigned long begin;
   unsigned long end;
+  unsigned long min_dist;
+  unsigned long max_dist;
+  unsigned int *h_invalid;
   unsigned int *h_i;
   unsigned int *h_j;
   double *h_mij;
@@ -56,9 +60,14 @@ int hic_read(const char *hic_file,
   *data = calloc_errchk(1, sizeof(hic), "calloc hic");
   {
     (*data)->nrow = mywc(hic_file);  
-    (*data)->i = calloc_errchk((*data)->nrow, sizeof(unsigned int), "calloc hic (*data)->i");
-    (*data)->j = calloc_errchk((*data)->nrow, sizeof(unsigned int), "calloc hic (*data)->j");
-    (*data)->mij = calloc_errchk((*data)->nrow, sizeof(double), "calloc hic (*data)->mij");
+    (*data)->invalid = calloc_errchk((*data)->nrow, sizeof(unsigned int),
+				     "calloc hic (*data)->invalid");
+    (*data)->i = calloc_errchk((*data)->nrow, sizeof(unsigned int),
+			       "calloc hic (*data)->i");
+    (*data)->j = calloc_errchk((*data)->nrow, sizeof(unsigned int),
+			       "calloc hic (*data)->j");
+    (*data)->mij = calloc_errchk((*data)->nrow, sizeof(double), 
+				 "calloc hic (*data)->mij");
     (*data)->res = res;
   }
 
@@ -76,10 +85,15 @@ int hic_read(const char *hic_file,
     }
     
     while(fgets(buf, BUF_SIZE, fp) && row < (*data)->nrow){
-      sscanf(buf, "%d\t%d\t%s", &tmp_i, &tmp_j, (char *)(&tmp_mij_str));
-      ((*data)->i)[row] = tmp_i / res;
-      ((*data)->j)[row] = tmp_j / res;
-      ((*data)->mij)[row] = strtod(tmp_mij_str, NULL);
+      sscanf(buf, "%d\t%d\t%s", &tmp_i, &tmp_j, (char *)(&tmp_mij_str));	 
+      ((*data)->mij)[row] = strtod(tmp_mij_str, NULL);	  
+      if(tmp_i <= tmp_j){
+	((*data)->i)[row] = tmp_i / res;
+	((*data)->j)[row] = tmp_j / res;
+      }else{
+	((*data)->i)[row] = tmp_j / res;
+	((*data)->j)[row] = tmp_i / res;
+      }
       row++;
     }
   
@@ -173,49 +187,99 @@ int hic_raw_read(const char *hic_raw_dir,
 
 
 /**
- * normalization and or O/E conversion
+ * - normalization and/or O/E conversion
+ * - size selection
  */
 
 /* normalization and O/E conversion */
 void *hic_prep_thread_norm_exp(void *args){
   hic_prep_thread_args *params = (hic_prep_thread_args *)args;
-  unsigned long row;
-  struct timeval ts, tg;
-  gettimeofday(&ts, NULL);
-
+  unsigned long row, ij_dist;
+ 
   for(row = params-> begin; row <= params -> end; row++){
-    (params->h_mij)[row] /= ((params->norm)[(params->h_i)[row]] *
-			     (params->norm)[(params->h_j)[row]] *
-			     (params->exp)[(params->h_j)[row] - (params->h_i)[row]]);
+    ij_dist = (params->h_j)[row] - (params->h_i)[row];
+
+    if(params->min_dist <= ij_dist && ij_dist <= params->max_dist){
+
+      (params->h_mij)[row] /= ((params->norm)[(params->h_i)[row]] *
+			       (params->norm)[(params->h_j)[row]] *
+			       (params->exp)[(params->h_j)[row] - (params->h_i)[row]]);
+
+      if(isnan((params->h_mij)[row]) || isinf((params->h_mij)[row])){
+	(params->h_invalid)[row] = 1;
+      }
+    }else{
+      (params->h_invalid)[row] = 1;
+    }
   }
 
-  gettimeofday(&tg, NULL);
-  printf("%d\t%ld : %ld\t%f\n", params->thread_id, params->begin, params->end, diffSec(ts, tg));
   return NULL;
 }
 
 /* normalization only */
 void *hic_prep_thread_norm(void *args){
   hic_prep_thread_args *params = (hic_prep_thread_args *)args;
-  unsigned long row;
+  unsigned long row, ij_dist;
 
   for(row = params-> begin; row <= params -> end; row++){
-    (params->h_mij)[row] /= ((params->norm)[(params->h_i)[row]] *
-			     (params->norm)[(params->h_j)[row]]);			 
+    ij_dist = (params->h_j)[row] - (params->h_i)[row];
+
+    if(params->min_dist <= ij_dist && ij_dist <= params->max_dist){
+
+      (params->h_mij)[row] /= ((params->norm)[(params->h_i)[row]] *
+			       (params->norm)[(params->h_j)[row]]);			 
+
+      if(isnan((params->h_mij)[row]) || isinf((params->h_mij)[row])){
+	(params->h_invalid)[row] = 1;
+      }
+    }else{
+      (params->h_invalid)[row] = 1;
+    }
   }
+
   return NULL;
 }
 
 /* O/E conversion only */
 void *hic_prep_thread_exp(void *args){
   hic_prep_thread_args *params = (hic_prep_thread_args *)args;
-  unsigned long row;
+  unsigned long row, ij_dist;
 
   for(row = params-> begin; row <= params -> end; row++){
-    (params->h_mij)[row] /= (params->exp)[(params->h_j)[row] - (params->h_i)[row]];
+    ij_dist = (params->h_j)[row] - (params->h_i)[row];
+
+    if(params->min_dist <= ij_dist && ij_dist <= params->max_dist){
+
+      (params->h_mij)[row] /= (params->exp)[(params->h_j)[row] - (params->h_i)[row]];
+
+      if(isnan((params->h_mij)[row]) || isinf((params->h_mij)[row])){
+	(params->h_invalid)[row] = 1;
+      }
+    }else{
+      (params->h_invalid)[row] = 1;
+    }
   }
   return NULL;
 }
+
+/* O/E conversion only */
+void *hic_prep_thread(void *args){
+  hic_prep_thread_args *params = (hic_prep_thread_args *)args;
+  unsigned long row, ij_dist;
+  for(row = params-> begin; row <= params -> end; row++){
+    ij_dist = (params->h_j)[row] - (params->h_i)[row];
+
+    if(params->max_dist < ij_dist ||
+       ij_dist < params->min_dist ||
+       isnan((params->h_mij)[row]) ||
+       isinf((params->h_mij)[row])){
+
+      (params->h_invalid)[row] = 1;
+    }
+  }
+  return NULL;
+}
+
 
 int hic_prep(const command_line_arguements *cmd_args,
 	     hic **hic){
@@ -229,7 +293,8 @@ int hic_prep(const command_line_arguements *cmd_args,
 	       &raw);
 
   gettimeofday(&ts, NULL);
-  if(cmd_args->exec_thread_num > 1){
+
+  if(cmd_args->exec_thread_num >= 1){
     int i = 0;
     hic_prep_thread_args *params;
     pthread_t* threads = NULL;
@@ -248,9 +313,12 @@ int hic_prep(const command_line_arguements *cmd_args,
       params[i].end = ((i == (cmd_args->exec_thread_num - 1)) ?
 		       raw->hic->nrow - 1 :
 		       ((raw->hic->nrow / cmd_args->exec_thread_num) * (i + 1) - 1));
+      params[i].h_invalid = raw->hic->invalid;
       params[i].h_i = raw->hic->i;
       params[i].h_j = raw->hic->j;
       params[i].h_mij = raw->hic->mij;
+      params[i].min_dist = cmd_args->min_size / cmd_args->res;
+      params[i].max_dist = cmd_args->max_size / cmd_args->res;
       params[i].norm = raw->norm;
       params[i].exp = raw->exp;
     }
@@ -286,6 +354,15 @@ int hic_prep(const command_line_arguements *cmd_args,
 	pthread_join(threads[i], NULL);
       }      
       free(raw->exp);
+    }else{
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	pthread_create(&threads[i], NULL, 
+		       hic_prep_thread,
+		       (void*)&params[i]);
+      }
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	pthread_join(threads[i], NULL);
+      }      
     }
     free(threads);
     free(params);

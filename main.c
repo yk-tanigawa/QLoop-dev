@@ -42,15 +42,6 @@ int show_warning(FILE *fp,
 int main_sub(const command_line_arguements *args,
 	     const char *prog_name){
 
-#if 0
-  hic_raw *raw;
-  hic_raw_read(args->hicRaw_dir,
-	       args->res,
-	       args->chr,
-	       args->norm,
-	       args->exp,
-	       &raw);
-#endif
   hic *hic;
   hic_prep(args, &hic);
 

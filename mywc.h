@@ -8,14 +8,14 @@
 /**
  * wc -l
  */
-unsigned long mywc(const char *fName){
+unsigned long mywc(const char *file_name){
   unsigned long lines = 0;
   FILE* fp;
   char buf[MYWC_BUF_SIZE];
   
-  if((fp = fopen(fName, "r")) == NULL){
-    fprintf(stderr, "error: fdopen %s\n%s\n",
-	    fName, strerror(errno));
+  if((fp = fopen(file_name, "r")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    file_name, strerror(errno));
     exit(EXIT_FAILURE);
   }
 
@@ -26,6 +26,30 @@ unsigned long mywc(const char *fName){
   fclose(fp);
 
   return lines;
+}
+
+/**
+ * wc -b
+ */
+unsigned long mywc_b(const char *file_name){
+  int fd;
+  struct stat stbuf;
+
+  if((fd = open(file_name, O_RDONLY)) == -1){
+    fprintf(stderr, "error: open %s\n%s\n", 
+	    file_name, strerror(errno));      
+    exit(EXIT_FAILURE);
+  }
+
+  if(fstat(fd, &stbuf) == -1){
+    fprintf(stderr, "error: fstat %s\n%s\n",
+	    file_name, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  close(fd);
+
+  return stbuf.st_size;
 }
 
 
