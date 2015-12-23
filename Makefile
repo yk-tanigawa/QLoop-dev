@@ -9,7 +9,10 @@ EXEC = $(SRCS:.c=)
 RM = rm -f
 
 
-all: $(EXEC)
+all: main
+
+main: main.o
+	$(LD) $(LDFLAGS) -o $@ $^
 
 prep: prep.o
 	$(LD) $(LDFLAGS) -o $@ $^

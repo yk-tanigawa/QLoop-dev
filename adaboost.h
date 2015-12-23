@@ -5,6 +5,9 @@
 #include <math.h>
 #include "calloc_errchk.h"
 #include "diffSec.h"
+#include "io.h"
+
+#define BUF_SIZE 4096
 
 inline void adaDataOnTheFly(const int h_i,
 			    const int h_j,
@@ -29,6 +32,37 @@ inline unsigned short adaDataOnTheFlyAxis(const int h_i,
   const unsigned long nkmers = 1 << (2 * k);
   return (((kmerFreq[h_i][axis / nkmers] * kmerFreq[h_j][axis % nkmers]) > 0) ? 1 : 0);
 }
+
+
+int dump_results(FILE *fp,
+		 const unsigned long *adaAxis,
+		 const int *adaSign,
+		 const double *adaBeta,
+		 const unsigned long T,
+		 const int k){
+  const unsigned long nkmers = 1 << (2 * k);
+  unsigned long t;
+  char **kmerStrings;
+
+  setKmerStrings(k, &kmerStrings);
+  
+  for(t = 0; t < T; t++){
+    fprintf(fp, "%e\t%s\t%s\t%ld\t%d\n",
+	    adaBeta[t],
+	    kmerStrings[adaAxis[t] / nkmers],
+	    kmerStrings[adaAxis[t] % nkmers],
+	    adaAxis[t],
+	    adaSign[t]);
+  }
+
+  for(t = 0; t < nkmers; t++){
+    free(kmerStrings[t]);
+  }
+  free(kmerStrings);
+
+  return 0;
+}
+
 
 
 int adaboostLearnOnTheFly(const unsigned int *y,

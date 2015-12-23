@@ -37,8 +37,7 @@ int main_sub(const char *freqFile,
 	     const int res,
 	     const double threshold,
 	     const unsigned long T,
-	     const char *outFile,
-	     const int bitmode){
+	     const char *outFile){
 
   int **kmerFreq;
   unsigned long nBin, b;
@@ -54,7 +53,7 @@ int main_sub(const char *freqFile,
 
   FILE *fp;
 
-  if(bitmode == 0){
+
     /* generate data on the fly mode */
     /* load data */
     {
@@ -73,7 +72,7 @@ int main_sub(const char *freqFile,
 			    1 << (4 * k),
 			    &adaAxis, &adaSign, &adaBeta);
     }
-  }
+
 
   /* write or show the results */
   {
@@ -96,14 +95,14 @@ int main_sub(const char *freqFile,
 
   /* free memory */
   {
-    if(bitmode == 0){
+
       for(b = 0; b < nBin; b++){
 	free(kmerFreq[b]);
       }
       free(kmerFreq);
       free(h_i);
       free(h_j);
-    }
+
   }
   return 0;
 }
@@ -129,7 +128,6 @@ int check_params(const char *freqFile,
 		 const double threshold,
 		 const unsigned long T,
 		 const char *outDir,
-		 const int bitmode,
 		 const char *progName){
   int errflag = 0;
 
@@ -185,10 +183,6 @@ int check_params(const char *freqFile,
     printf("  Output dir:    %s\n", outDir);
   }
 
-  if(bitmode != 0 && errflag == 0){
-    printf("  [INFO] bitmode\n");
-  }
-
   if(errflag > 0){
     show_usage(progName);
     exit(EXIT_FAILURE);
@@ -201,7 +195,7 @@ int check_params(const char *freqFile,
 #if 1
 int main(int argc, char **argv){
   char *freqFile = NULL, *hicFile = NULL, *outDir = NULL, *outFile = NULL;
-  int k = 0, res = 0, bitmode = 0;
+  int k = 0, res = 0;
   unsigned long T = 0;
   double threshold = 0;
 
@@ -217,11 +211,10 @@ int main(int argc, char **argv){
     {"threshold", required_argument, NULL, 't'},
     {"T",         required_argument, NULL, 'T'},
     {"out",       required_argument, NULL, 'o'},
-    {"bitmode",   no_argument,       NULL, 'b'},
     {0, 0, 0, 0}
   };
 
-  while((opt = getopt_long(argc, argv, "hvf:H:k:r:t:T:o:b",
+  while((opt = getopt_long(argc, argv, "hvf:H:k:r:t:T:o:",
 			   long_opts, &opt_idx)) != -1){
     switch (opt){
       case 'h': /* help */
@@ -251,26 +244,19 @@ int main(int argc, char **argv){
       case 'o': /* out */
 	outDir = optarg;
 	break;
-      case 'b': /* bitmode */
-	bitmode = 1;
-	break;
     }
   }
 
-  check_params(freqFile, hicFile, k, res, threshold, T, outDir, bitmode, argv[0]);
+  check_params(freqFile, hicFile, k, res, threshold, T, outDir, argv[0]);
 
   if(outDir != NULL){
     outFile = calloc_errchk(F_NAME_LEN, sizeof(char), "calloc outFile");
-    if(bitmode == 0){
-      sprintf(outFile, "%s%s.k%d.t%f.T%ld.stamps",
-	      outDir, basename(hicFile), k, threshold, T);
-    }else{
-      sprintf(outFile, "%s%s.k%d.t%f.T%ld.bit5.stamps",
-	      outDir, basename(hicFile), k, threshold, T);
-    }
+    sprintf(outFile, "%s%s.k%d.t%f.T%ld.stamps",
+	    outDir, basename(hicFile), k, threshold, T);
+
   }
 
-  main_sub(freqFile, hicFile, k, res, threshold, T, outFile, bitmode);
+  main_sub(freqFile, hicFile, k, res, threshold, T, outFile);
  
   return 0;
 }
