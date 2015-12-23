@@ -57,6 +57,19 @@ int binarization(const double *source,
   return 0;
 }
 
+/* compute reverse complement of a given k-mer */
+long revComp(long kmer, 
+	     const int k){
+  long revComp = 0;
+  kmer = ((~kmer) & ((1 << (2 * k)) - 1));
+  int i;
+  for(i = 0; i <  k; i++){
+    revComp <<= 2;
+    revComp += (kmer & 3);
+    kmer >>= 2;
+  }
+  return revComp;
+}
 
 int main_sub(const char *freqFile,
 	     const char *hicFile,
@@ -345,18 +358,6 @@ int main(int argc, char **argv){
 #endif
 
 
-long revComp(long kmer, 
-	     const int k){
-  long revComp = 0;
-  kmer = ((~kmer) & ((1 << (2 * k)) - 1));
-  int i;
-  for(i = 0; i <  k; i++){
-    revComp <<= 2;
-    revComp += (kmer & 3);
-    kmer >>= 2;
-  }
-  return revComp;
-}
 
 
 int main(void){
