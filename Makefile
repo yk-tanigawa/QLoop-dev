@@ -1,7 +1,7 @@
 CC = gcc
 LD = gcc
 CFLAGS = -Wall -Wextra -O2
-LDFLAGS = #-lpthread -lm
+LDFLAGS = -lpthread -lm
 SRCS := $(wildcard *.c) # wildcard
 OBJS = $(SRCS:.c=.o)
 DEPS = $(SRCS:.c=.dep)

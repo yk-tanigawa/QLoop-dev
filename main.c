@@ -9,6 +9,7 @@
 #include <math.h>
 #include <getopt.h>
 #include <libgen.h>
+#include <pthread.h>
 
 #include "calloc_errchk.h"
 
@@ -142,6 +143,11 @@ int check_args(const command_line_arguements *args,
 	    prog_name, args->output_dir);
   }
 
+  if(args->exec_thread_num > 0){	       
+    fprintf(stderr, "%s: Info: thread num: %d\n", 
+	    prog_name, args->exec_thread_num);
+  }
+
   if(errflag > 0){
     show_usage(stderr, prog_name);
     exit(EXIT_FAILURE);
@@ -175,15 +181,17 @@ int main(int argc, char **argv){
     /* output */
     {"out",           required_argument, NULL, 'o'},
     /* exec_mode */
-    {"quite",         no_argument, NULL, 'q'},
-    {"skipPrep",      no_argument, NULL, 's'},
+    {"quite",         no_argument,       NULL, 'q'},
+    {"skipPrep",      no_argument,       NULL, 's'},
+    {"QPonly",        no_argument,       NULL, 'Q'},
+    {"thread_num",    required_argument, NULL, 't'},
     {0, 0, 0, 0}
   };
 
   args = calloc_errchk(1, sizeof(command_line_arguements), 
 		       "calloc: command line args");
 
-  while((opt = getopt_long(argc, argv, "hvc:r:k:m:M:i:p:n:e:g:R:f:H:O:o:qs",
+  while((opt = getopt_long(argc, argv, "hvc:r:k:m:M:i:p:n:e:g:R:f:H:O:o:qsQt:",
 			   long_opts, &opt_idx)) != -1){
     switch (opt){
       case 'h': /* help */
@@ -253,10 +261,21 @@ int main(int argc, char **argv){
       case 's': /* skipPrep */
 	args->exec_mode_skip_prep = 1;
 	break;
+      case 'Q': /* QPonly */
+	args->exec_mode_QP_only = 1;
+	break;
+      case 't': /* thread_num */
+	args->exec_thread_num = atoi(optarg);
+	break;
     }
   }
 
   check_args(args, argv[0]);
+
+  /* set exec_thread_num */
+  if(args->exec_thread_num <= 0){
+    args->exec_thread_num = (int)sysconf(_SC_NPROCESSORS_ONLN);
+  }
 
   main_sub(args, argv[0]);
 

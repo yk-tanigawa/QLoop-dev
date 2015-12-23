@@ -24,6 +24,8 @@ typedef struct _command_line_arguements {
   /* exec_mode */
   int exec_mode_quite;
   int exec_mode_skip_prep;
+  int exec_mode_QP_only;
+  int exec_thread_num;
 } command_line_arguements;
 
 

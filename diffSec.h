@@ -1,6 +1,8 @@
 #ifndef __diffSec_H__
 #define __diffSec_H__
 
+#include <sys/time.h>
+
 /**
  * compute difference of struct timeval and return it in seconds
  */

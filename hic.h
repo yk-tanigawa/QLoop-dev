@@ -11,6 +11,7 @@
 #include "mywc.h"
 #include "calloc_errchk.h"
 #include "io.h"
+#include "diffSec.h"
 
 
 /* normalized O/E converted Hi-C data */
@@ -36,8 +37,8 @@ typedef struct _hic_prep_thread_args{
   int thread_id;
   unsigned long begin;
   unsigned long end;
-  int *h_i;
-  int *h_j;
+  unsigned int *h_i;
+  unsigned int *h_j;
   double *h_mij;
   double *norm;
   double *exp;
@@ -106,14 +107,14 @@ inline char *res2str(const unsigned int res){
 }
 
 /* set appropriate file names */
-int set_hic_file_names(const char *hicDir,
-		       const unsigned int res,
-		       const unsigned int chr,
-		       const char *norm,
-		       const char *exp,
-		       char **hic_raw_file,
-		       char **hic_norm_file,
-		       char **hic_exp_file){
+inline void set_hic_file_names(const char *hicDir,
+			       const unsigned int res,
+			       const unsigned int chr,
+			       const char *norm,
+			       const char *exp,
+			       char **hic_raw_file,
+			       char **hic_norm_file,
+			       char **hic_exp_file){
   {
     char file_head[F_NAME_LEN]; 
     sprintf(file_head, "%s/%s_resolution_intrachromosomal/chr%d/MAPQGE30/chr%d_%s",
@@ -138,7 +139,7 @@ int set_hic_file_names(const char *hicDir,
   }
 
 
-  return 0;
+  return;
 }
 
 /* read one matrix and two vectors */
@@ -179,12 +180,17 @@ int hic_raw_read(const char *hic_raw_dir,
 void *hic_prep_thread_norm_exp(void *args){
   hic_prep_thread_args *params = (hic_prep_thread_args *)args;
   unsigned long row;
+  struct timeval ts, tg;
+  gettimeofday(&ts, NULL);
 
   for(row = params-> begin; row <= params -> end; row++){
     (params->h_mij)[row] /= ((params->norm)[(params->h_i)[row]] *
 			     (params->norm)[(params->h_j)[row]] *
 			     (params->exp)[(params->h_j)[row] - (params->h_i)[row]]);
   }
+
+  gettimeofday(&tg, NULL);
+  printf("%d\t%ld : %ld\t%f\n", params->thread_id, params->begin, params->end, diffSec(ts, tg));
   return NULL;
 }
 
@@ -213,12 +219,83 @@ void *hic_prep_thread_exp(void *args){
 
 int hic_prep(const command_line_arguements *cmd_args,
 	     hic **hic){
+  struct timeval ts, tg;
+
+
   hic_raw *raw;
   hic_raw_read(cmd_args->hicRaw_dir,
 	       cmd_args->res,  cmd_args->chr,	       
 	       cmd_args->norm, cmd_args->exp,	       
 	       &raw);
+
+  gettimeofday(&ts, NULL);
+  if(cmd_args->exec_thread_num > 1){
+    int i = 0;
+    hic_prep_thread_args *params;
+    pthread_t* threads = NULL;
+
+    params = calloc_errchk(cmd_args->exec_thread_num,			   
+			   sizeof(hic_prep_thread_args),
+			   "calloc: hic_prep_thread_args");
+    threads = calloc_errchk(cmd_args->exec_thread_num,			   
+			    sizeof(pthread_t),
+			    "calloc: threads");
+        
+    /* set variables */
+    for(i = 0; i < cmd_args->exec_thread_num; i++){
+      params[i].thread_id = i;
+      params[i].begin = ((i == 0) ? 0 : params[i - 1].end + 1);
+      params[i].end = ((i == (cmd_args->exec_thread_num - 1)) ?
+		       raw->hic->nrow - 1 :
+		       ((raw->hic->nrow / cmd_args->exec_thread_num) * (i + 1) - 1));
+      params[i].h_i = raw->hic->i;
+      params[i].h_j = raw->hic->j;
+      params[i].h_mij = raw->hic->mij;
+      params[i].norm = raw->norm;
+      params[i].exp = raw->exp;
+    }
+
+    if(cmd_args->norm != NULL && cmd_args->exp != NULL){
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	pthread_create(&threads[i], NULL, 
+		       hic_prep_thread_norm_exp,
+		       (void*)&params[i]);
+      }
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	pthread_join(threads[i], NULL);
+      }
+      free(raw->norm);
+      free(raw->exp);
+    }else if(cmd_args->norm != NULL){
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	pthread_create(&threads[i], NULL, 
+		       hic_prep_thread_norm,
+		       (void*)&params[i]);
+      }
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	pthread_join(threads[i], NULL);
+      }      
+      free(raw->norm);
+    }else if(cmd_args->exp != NULL){
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	pthread_create(&threads[i], NULL, 
+		       hic_prep_thread_exp,
+		       (void*)&params[i]);
+      }
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	pthread_join(threads[i], NULL);
+      }      
+      free(raw->exp);
+    }
+    free(threads);
+    free(params);
+  }
   *hic = raw->hic;
+  free(raw);
+
+  gettimeofday(&tg, NULL);
+  printf("%d\t%f\n", cmd_args->exec_thread_num, diffSec(ts, tg));
+
   return 0;
 }
 
