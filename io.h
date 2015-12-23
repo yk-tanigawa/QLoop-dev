@@ -3,9 +3,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include "mywc.h"
 
 #define BUF_SIZE 4096
-
+#if 0
 
 long wc(const char *fName){
   long lines = 0;
@@ -26,6 +27,7 @@ long wc(const char *fName){
 
   return lines;
 }
+#endif
 
 int readTableInt(const char *file,
 		 const char *dlim,
@@ -37,7 +39,7 @@ int readTableInt(const char *file,
   char *tok;
   unsigned long col = 0, row = 0;
 
-  *nrow = wc(file);
+  *nrow = mywc(file);
   
   *table = calloc_errchk(sizeof(int *), *nrow, "calloc table");
 
@@ -81,7 +83,7 @@ int readTableBinary(const char *file,
   char *tok;
   unsigned long col = 0, row = 0;
 
-  *nrow = wc(file);
+  *nrow = mywc(file);
   
   *table = calloc_errchk(sizeof(int *), *nrow, "calloc table");
 
@@ -123,7 +125,7 @@ int readHic(const char *file,
   int tmp_i, tmp_j;
   unsigned long row = 0;
 
-  *nrow = wc(file);
+  *nrow = mywc(file);
   
   *h_i = calloc_errchk(*nrow, sizeof(int), "calloc h_i");
   *h_j = calloc_errchk(*nrow, sizeof(int), "calloc h_j");

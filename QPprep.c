@@ -23,7 +23,7 @@ int readVectorInt(const char *file,
   char buf[BUF_SIZE];
   unsigned long row = 0;
 
-  *nrow = wc(file);
+  *nrow = mywc(file);
   
   *vector = calloc_errchk(sizeof(int), *nrow, "calloc vector");
 
