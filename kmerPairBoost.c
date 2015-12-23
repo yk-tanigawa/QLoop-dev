@@ -29,32 +29,6 @@ int binarization(const double *source,
   return 0;
 }
 
-int binarizationBit(const double *source,
-		 const double threshold,
-		 const unsigned long length,
-		 unsigned int **target){
-  const size_t intBits = 8 * sizeof(unsigned int);
-  unsigned long i;
-  unsigned int buf = 0;
-  *target = calloc_errchk((length + intBits - 1) / intBits, 
-			  sizeof(unsigned int), "calloc target");
-  {
-    for(i = 0; i < length; i++){
-      buf = (buf << 1);
-      buf += ((source[i] > threshold) ? 1 : 0);
-      if(((i + 1) % intBits) == 0){
-	(*target)[i / intBits] = buf;
-	buf = 0;
-      }
-    }
-    if((length % intBits) != 0){
-      buf = (buf << (intBits - (length % intBits)));
-      (*target)[length / intBits] = buf;
-    }
-  }
-  return 0;
-}
-
 /* compute reverse complement of a given k-mer */
 long revComp(long kmer, 
 	     const int k){
@@ -112,36 +86,6 @@ int main_sub(const char *freqFile,
 			    1 << (4 * k),
 			    &adaAxis, &adaSign, &adaBeta);
     }
-  }else{
-    /* bitmode */
-    /* load data */
-    {
-      readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
-      readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
-
-      binarizationBit(h_mij, threshold, nHic, &y);
-      constructBitTableColumn((const int *)h_i, (const int*)h_j, 			
-			      (const int **)kmerFreq, 
-			      (const unsigned long)nHic, k,
-			      &x);
-
-      for(b = 0; b < nBin; b++){
-	free(kmerFreq[b]);
-      }
-      free(kmerFreq);
-      free(h_i);
-      free(h_j);
-      free(h_mij);
-    }
-
-    /* execute adaboost */
-    {
-      adaboostBitLearnColumn((const unsigned int *)y, 
-			     (const unsigned int **)x,
-			     T, (const unsigned long)nHic, 
-			     1 << (4 * k),
-			     &adaAxis, &adaSign, &adaBeta);
-    }
   }
 
   /* write or show the results */
@@ -172,17 +116,7 @@ int main_sub(const char *freqFile,
       free(kmerFreq);
       free(h_i);
       free(h_j);
-    }else{
-      //for(b = 0; b < nHic; b++){
-      for(b = 0; b < (unsigned long)(1 << (4 * k)); b++){
-	free(x[b]);
-      }
-      free(x);
     }
-    free(y);
-    free(adaAxis);
-    free(adaSign);
-    free(adaBeta);
   }
   return 0;
 }
@@ -277,7 +211,7 @@ int check_params(const char *freqFile,
 }
 
 
-#if 0
+#if 1
 int main(int argc, char **argv){
   char *freqFile = NULL, *hicFile = NULL, *outDir = NULL, *outFile = NULL;
   int k = 0, res = 0, bitmode = 0;
@@ -357,7 +291,7 @@ int main(int argc, char **argv){
 
 
 
-
+#if 0
 int main(void){
   int k = 3;
   long i = 0;
@@ -372,3 +306,4 @@ int main(void){
 
   return 0;
 }
+#endif
