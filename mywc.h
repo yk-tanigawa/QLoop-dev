@@ -1,5 +1,5 @@
 #ifndef __MY_WC_H__
-#define __MY_WC___
+#define __MY_WC_H__
 
 #include <stdlib.h>
 #include <stdio.h>

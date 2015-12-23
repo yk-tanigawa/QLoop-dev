@@ -13,6 +13,7 @@
 #include "adaboost.h"
 #include "calloc_errchk.h"
 #include "io.h"
+#include "kmer.h"
 
 #define F_NAME_LEN 128
 #define BUF_SIZE 4096
@@ -29,19 +30,6 @@ int binarization(const double *source,
   return 0;
 }
 
-/* compute reverse complement of a given k-mer */
-long revComp(long kmer, 
-	     const int k){
-  long revComp = 0;
-  kmer = ((~kmer) & ((1 << (2 * k)) - 1));
-  int i;
-  for(i = 0; i <  k; i++){
-    revComp <<= 2;
-    revComp += (kmer & 3);
-    kmer >>= 2;
-  }
-  return revComp;
-}
 
 int main_sub(const char *freqFile,
 	     const char *hicFile,
@@ -57,7 +45,6 @@ int main_sub(const char *freqFile,
 
   int *h_i, *h_j;
   double *h_mij;
-  unsigned int **x;
   unsigned int *y;
   unsigned long nHic;
 
@@ -71,8 +58,8 @@ int main_sub(const char *freqFile,
     /* generate data on the fly mode */
     /* load data */
     {
-      readTableInt(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
-      readHic(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
+      kmerFreqRead(freqFile, "\t", 1 << (2 * k), &kmerFreq, &nBin);
+      HicRead(hicFile, res, &h_i, &h_j, &h_mij, &nHic);
       binarization(h_mij, threshold, nHic, &y);
       free(h_mij);
     }
