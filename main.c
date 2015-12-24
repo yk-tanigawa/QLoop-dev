@@ -50,7 +50,7 @@ int main_sub(const command_line_arguements *args,
 #endif
 
   unsigned int **kmer_freq;
-  count_kmer_freq(args, &kmer_freq);
+  set_kmer_freq(args, &kmer_freq);
 
   return 0;
 }
