@@ -42,13 +42,11 @@ int show_warning(FILE *fp,
 int main_sub(const command_line_arguements *args,
 	     const char *prog_name){
 
-#if 0
-  hic *hic;
-  hic_prep(args, &hic);
-#endif
-
   unsigned int **kmer_freq;
+  hic *hic;
   set_kmer_freq(args, &kmer_freq);
+  hic_prep(args, &hic);
+
 
   return 0;
 }

@@ -292,7 +292,9 @@ int hic_prep(const command_line_arguements *cmd_args,
 	       cmd_args->norm, cmd_args->exp,	       
 	       &raw);
 
+#if 0
   gettimeofday(&ts, NULL);
+#endif
 
   if(cmd_args->exec_thread_num >= 1){
     int i = 0;
@@ -370,8 +372,10 @@ int hic_prep(const command_line_arguements *cmd_args,
   *hic = raw->hic;
   free(raw);
 
+#if 0
   gettimeofday(&tg, NULL);
   printf("%d\t%f\n", cmd_args->exec_thread_num, diffSec(ts, tg));
+#endif
 
   return 0;
 }

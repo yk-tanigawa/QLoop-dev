@@ -31,7 +31,6 @@ int fasta_read(const char *fasta_file,
 	       char **seq_head,
 	       char **seq,
 	       unsigned long *seq_len){
-  unsigned long i = 0;
 
   *seq_len = mywc_b(fasta_file);
   {
@@ -54,16 +53,20 @@ int fasta_read(const char *fasta_file,
 
     /* get sequence body */ 
     {
+      unsigned long i = 0;
       *seq = calloc_errchk(*seq_len, sizeof(char), "seq");
-      while(fscanf(fp, "%s", buf) != EOF && i < *seq_len){
-	strncpy(*seq, buf, strlen(buf));
-	*seq += strlen(buf);
+      while(fscanf(fp, "%s", buf) != EOF && i < *seq_len){	
+	strncpy(&((*seq)[i]), buf, strlen(buf));
 	i += strlen(buf);
       }
-    }
+      (*seq)[i++] = '\0';
+
+      realloc(*seq, i * sizeof(char));
+      fprintf(stderr, "%d\t%d\n", i, *seq_len);
+      *seq_len = i;
+    }    
     fclose(fp);
   }
-  *seq_len = i;
 
   return 0;
 }
@@ -94,8 +97,14 @@ void *kmer_freq_count(void *args){
   unsigned int bin = 0, i = 0, kmer = 0, contain_n = 0;
   const unsigned int bit_mask = (1 << (2 * (params->k))) - 1;
 
-  for(bin = params->begin; bin <= params->end + params-> k - 1; i++){
+#if 0
+  fprintf(stderr, "thread %d: start [%d : %d]\n",
+	  params->thread_id, params->begin, params->end);  
+#endif
+
+  for(bin = params->begin; bin <= params->end + params-> k - 1; bin++){
     contain_n = 0;
+
     /* check if this genome bin contains 'N' and allocate memory */
     for(i = bin * params->res;
 	i < (bin + 1) * params->res + params->k - 1; i++){
@@ -104,10 +113,14 @@ void *kmer_freq_count(void *args){
 	break;
       }
     }
+  
     if(contain_n != 0){
+
       /* if the bin contains 'N', then skip */
       (*(params->kmer_freq))[bin] = NULL;
+
     }else{
+
       /* For bins not containing 'N', allocate memory */
       (*(params->kmer_freq))[bin] = calloc_errchk((1 << (2 * (params->k))),
 						  sizeof(unsigned int),
@@ -115,7 +128,7 @@ void *kmer_freq_count(void *args){
       kmer = 0;
       /* convert first (k-1)-mer to bit-encoded sequence */
       for(i = bin * params->res; 
-	  bin * params->res + params->k - 1; i++){
+	  i < bin * params->res + params->k - 1; i++){
 	kmer <<= 2;
 	kmer += c2i((params->seq)[i]);
       }
@@ -132,7 +145,7 @@ void *kmer_freq_count(void *args){
 }
 
 int set_kmer_freq(const command_line_arguements *cmd_args,
-		    unsigned int ***kmer_freq){
+		  unsigned int ***kmer_freq){
   char *seq_head, *seq;
   unsigned long seq_len, bin_num;
  
@@ -141,21 +154,21 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
 
   fasta_read(cmd_args->fasta_file, 
 	     &seq_head, &seq, &seq_len);
+
+  fprintf(stderr, "Info: sequence: %s (%ld)\n", seq_head, seq_len);
   
-  bin_num = (seq_len / cmd_args->res) + 1; 
-
-  *kmer_freq = calloc_errchk(bin_num, sizeof(unsigned int *),
-			     "kmer_freq");
-			     
-
-  gettimeofday(&tg, NULL);
-  printf("%f\n", diffSec(ts, tg));
 
   {
     kmer_freq_count_args *params;
     pthread_t *threads = NULL;
     int i;
-  
+    bin_num = (seq_len / cmd_args->res); 
+
+    /* allocate memory for k-mer frequency table */  
+    *kmer_freq = calloc_errchk(bin_num, sizeof(unsigned int *),
+			       "kmer_freq");			      
+
+    /* allocate memory for threads */
     params = calloc_errchk(cmd_args->exec_thread_num,			   
 			   sizeof(kmer_freq_count_args),
 			   "calloc: hic_prep_thread_args");
@@ -178,7 +191,7 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
     /* pthread create */
     for(i = 0; i < cmd_args->exec_thread_num; i++){
       pthread_create(&threads[i], NULL, 
-		     hic_prep_thread_norm_exp,
+		     kmer_freq_count,
 		     (void*)&params[i]);
     }
 
@@ -187,6 +200,12 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
       pthread_join(threads[i], NULL);
     }
   }
+  free(seq);
+  free(seq_head);
+
+  gettimeofday(&tg, NULL);
+  printf("%f\n", diffSec(ts, tg));
+
 
   return 0;
 }
