@@ -16,10 +16,8 @@
 #include "cmd_args.h"
 #include "constant.h"
 #include "hic.h"
-
-#if 0
 #include "fasta.h"
-#endif
+
 
 int show_usage(FILE *fp, const char *prog_name){
   fprintf(fp, "%s:Info: Usage\n", prog_name);
