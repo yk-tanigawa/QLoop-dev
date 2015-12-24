@@ -7,6 +7,25 @@
 #include "calloc_errchk.h"
 #include "diffSec.h"
 
+/**
+ * This header file contains some functions to perform the following tasks
+ * - read FASTA format file and store seqeunce to memory 
+ * - compute k-mer frequencies for bins
+ */
+
+
+/* arguements for function */
+typedef struct _kmer_freq_count_args{
+  int thread_id;
+  unsigned long begin;
+  unsigned long end;
+  unsigned int k;
+  char *seq;
+  unsigned int **kmer_freq;
+} kmer_freq_count_args;
+
+
+/* read fasta file */
 int fasta_read(const char *fasta_file, 
 	       char **seq_head,
 	       char **seq,
@@ -32,7 +51,7 @@ int fasta_read(const char *fasta_file,
 
     }
 
-    /* get sequence body */ 
+`v    /* get sequence body */ 
     {
       *seq = calloc_errchk(*seq_len, sizeof(char), "seq");
       while(fscanf(fp, "%s", buf) != EOF && i < *seq_len){
@@ -48,6 +67,7 @@ int fasta_read(const char *fasta_file,
   return 0;
 }
 
+/* functionn to convert nucleotide letter to binary coded number */
 inline int c2i(const char c){
   switch(c){
     case 'A':
@@ -66,6 +86,26 @@ inline int c2i(const char c){
      fprintf(stderr, "input genomic sequence contains unknown char : %c\n", c);
      exit(EXIT_FAILURE);
   }
+}
+
+void *kmer_freq_count_args(void *args){
+  kmer_freq_count_args *params = (kmer_freq_count_args *)args;
+  unsigned int i;
+  
+  /* check if this genome bin contains 'N' */
+  for(i = params->begin; i <= params->end; i++){
+    if((params->seq)[i] == 'N' || (params->seq)[i] == 'n'){
+      *(params->kmer_freq) = NULL;
+      return NULL;
+    }
+  }
+  
+  /* allocate memory */
+  *(params->kmer_freq) = calloc_errchk((params->end) - (params->begin) + 1,
+				       sizeof(unsigned int), 
+				       "calloc ");
+
+  return NULL;
 }
 
 int count_kmer_freq(const command_line_arguements *cmd_args){
