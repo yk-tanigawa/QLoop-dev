@@ -16,10 +16,10 @@
 #include "cmd_args.h"
 #include "constant.h"
 #include "hic.h"
+
+#if 0
 #include "fasta.h"
-
-
-
+#endif
 
 int show_usage(FILE *fp, const char *prog_name){
   fprintf(fp, "%s:Info: Usage\n", prog_name);
@@ -40,6 +40,7 @@ int show_warning(FILE *fp,
   return 0;
 }
 
+
 int main_sub(const command_line_arguements *args,
 	     const char *prog_name){
 
@@ -48,9 +49,13 @@ int main_sub(const command_line_arguements *args,
   hic_prep(args, &hic);
 #endif
 
-  count_kmer_freq(args);
+  unsigned int **kmer_freq;
+  count_kmer_freq(args, &kmer_freq);
+
   return 0;
 }
+
+
 
 int check_args(const command_line_arguements *args,
 	       const char *prog_name){

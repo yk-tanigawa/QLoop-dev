@@ -297,7 +297,7 @@ int hic_prep(const command_line_arguements *cmd_args,
   if(cmd_args->exec_thread_num >= 1){
     int i = 0;
     hic_prep_thread_args *params;
-    pthread_t* threads = NULL;
+    pthread_t *threads = NULL;
 
     params = calloc_errchk(cmd_args->exec_thread_num,			   
 			   sizeof(hic_prep_thread_args),
