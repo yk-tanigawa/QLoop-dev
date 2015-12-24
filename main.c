@@ -16,6 +16,7 @@
 #include "cmd_args.h"
 #include "constant.h"
 #include "hic.h"
+#include "fasta.h"
 
 
 
@@ -42,9 +43,12 @@ int show_warning(FILE *fp,
 int main_sub(const command_line_arguements *args,
 	     const char *prog_name){
 
+#if 0
   hic *hic;
   hic_prep(args, &hic);
+#endif
 
+  count_kmer_freq(args);
   return 0;
 }
 

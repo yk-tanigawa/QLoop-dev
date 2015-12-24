@@ -1,14 +1,16 @@
 #ifndef __FASTA_H__
 #define __FASTA_H__
 
-#include "mywc.h"
 #include "constant.h"
+#include "cmd_args.h"
+#include "mywc.h"
 #include "calloc_errchk.h"
+#include "diffSec.h"
 
-int readFasta(const char *fasta_file, 
-	      char **seq_head,
-	      char **seq,
-	      unsigned long *seq_len){
+int fasta_read(const char *fasta_file, 
+	       char **seq_head,
+	       char **seq,
+	       unsigned long *seq_len){
   unsigned long i = 0;
 
   *seq_len = mywc_b(fasta_file);
@@ -17,22 +19,27 @@ int readFasta(const char *fasta_file,
     char buf[BUF_SIZE];
 
     /* file open */
-    if((fp = fopen(fastaName, "r")) == NULL){
+    if((fp = fopen(fasta_file, "r")) == NULL){
       fprintf(stderr, "error: fdopen %s\n%s\n",
-	      fastaName, strerror(errno));
+	      fasta_file, strerror(errno));
       exit(EXIT_FAILURE);
     }
 
-    *seq_head = calloc_errchk(F_NAME_LEN, sizeof(char), "seq_head");
     /* get sequence header */
-    fscanf(fp, "%s", *seq_head);
- 
-    *seq = calloc_errchk(*seq_len, sizeof(char), "seq");
-    /* get sequence body */
-    while(fscanf(fp, "%s", buf) != EOF && i < *seq_len){
-      strncpy(*seq, buf, strlen(buf));
-      *seq += strlen(buf);
-      i += strlen(buf);
+    {
+      *seq_head = calloc_errchk(FASTA_HEADER_LEN, sizeof(char), "seq_head");
+      fscanf(fp, "%s", *seq_head);
+
+    }
+
+    /* get sequence body */ 
+    {
+      *seq = calloc_errchk(*seq_len, sizeof(char), "seq");
+      while(fscanf(fp, "%s", buf) != EOF && i < *seq_len){
+	strncpy(*seq, buf, strlen(buf));
+	*seq += strlen(buf);
+	i += strlen(buf);
+      }
     }
     fclose(fp);
   }
@@ -61,6 +68,23 @@ inline int c2i(const char c){
   }
 }
 
+int count_kmer_freq(const command_line_arguements *cmd_args){
+  char *seq_head, *seq;
+  unsigned long seq_len;
+
+  struct timeval ts, tg;
+  gettimeofday(&ts, NULL);
+
+  fasta_read(cmd_args->fasta_file, 
+	     &seq_head, &seq, &seq_len);
+
+  gettimeofday(&tg, NULL);
+  printf("%f\n", diffSec(ts, tg));
+
+  return 0;
+}
+
+#if 0
 int computeFeatureSub(const int k,
 		      const int left,
 		      const int right,
@@ -386,3 +410,6 @@ int main(int argc, char **argv){
 
   return 0;
 }
+#endif
+
+#endif
