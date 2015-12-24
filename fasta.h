@@ -59,11 +59,9 @@ int fasta_read(const char *fasta_file,
 	strncpy(&((*seq)[i]), buf, strlen(buf));
 	i += strlen(buf);
       }
-      (*seq)[i++] = '\0';
-
-      realloc(*seq, i * sizeof(char));
-      fprintf(stderr, "%d\t%d\n", i, *seq_len);
       *seq_len = i;
+      (*seq)[i++] = '\0';
+      realloc(*seq, i * sizeof(char));
     }    
     fclose(fp);
   }
@@ -149,15 +147,12 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
   char *seq_head, *seq;
   unsigned long seq_len, bin_num;
  
-  struct timeval ts, tg;
-  gettimeofday(&ts, NULL);
-
+  /* read fasta file */
   fasta_read(cmd_args->fasta_file, 
 	     &seq_head, &seq, &seq_len);
-
   fprintf(stderr, "Info: sequence: %s (%ld)\n", seq_head, seq_len);
   
-
+  /* count k-mer frequency */
   {
     kmer_freq_count_args *params;
     pthread_t *threads = NULL;
@@ -200,12 +195,11 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
       pthread_join(threads[i], NULL);
     }
   }
+
   free(seq);
   free(seq_head);
 
-  gettimeofday(&tg, NULL);
-  printf("%f\n", diffSec(ts, tg));
-
+  fprintf(stderr, "Info: Complete k-mer frequency table computation\n");
 
   return 0;
 }

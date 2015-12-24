@@ -152,7 +152,6 @@ inline void set_hic_file_names(const char *hicDir,
     }
   }
 
-
   return;
 }
 
@@ -283,8 +282,6 @@ void *hic_prep_thread(void *args){
 
 int hic_prep(const command_line_arguements *cmd_args,
 	     hic **hic){
-  struct timeval ts, tg;
-
 
   hic_raw *raw;
   hic_raw_read(cmd_args->hicRaw_dir,
@@ -292,9 +289,7 @@ int hic_prep(const command_line_arguements *cmd_args,
 	       cmd_args->norm, cmd_args->exp,	       
 	       &raw);
 
-#if 0
-  gettimeofday(&ts, NULL);
-#endif
+  fprintf(stderr, "Info: Hi-C: loaded Hi-C Raw file and normalization vector(s)\n");
 
   if(cmd_args->exec_thread_num >= 1){
     int i = 0;
@@ -372,10 +367,7 @@ int hic_prep(const command_line_arguements *cmd_args,
   *hic = raw->hic;
   free(raw);
 
-#if 0
-  gettimeofday(&tg, NULL);
-  printf("%d\t%f\n", cmd_args->exec_thread_num, diffSec(ts, tg));
-#endif
+  fprintf(stderr, "Info: Hi-C: Completed Normalization O/E conversion\n");
 
   return 0;
 }
