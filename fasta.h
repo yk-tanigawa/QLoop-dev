@@ -61,7 +61,10 @@ int fasta_read(const char *fasta_file,
       }
       *seq_len = i;
       (*seq)[i++] = '\0';
-      realloc(*seq, i * sizeof(char));
+      if((*seq = realloc(*seq, i * sizeof(char))) == NULL){
+	fprintf(stderr, "realloc: seq\n");
+	exit(EXIT_FAILURE);
+      }
     }    
     fclose(fp);
   }
@@ -150,7 +153,8 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
   /* read fasta file */
   fasta_read(cmd_args->fasta_file, 
 	     &seq_head, &seq, &seq_len);
-  fprintf(stderr, "Info: sequence: %s (%ld)\n", seq_head, seq_len);
+  fprintf(stderr, "%s: info: sequence: %s (%ld)\n", 
+	  cmd_args->prog_name, seq_head, seq_len);
   
   /* count k-mer frequency */
   {
@@ -199,7 +203,8 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
   free(seq);
   free(seq_head);
 
-  fprintf(stderr, "Info: Complete k-mer frequency table computation\n");
+  show_info(stderr, cmd_args->prog_name, 
+	    "Complete k-mer frequency table computation");
 
   return 0;
 }

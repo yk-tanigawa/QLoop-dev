@@ -26,6 +26,7 @@ typedef struct _command_line_arguements {
   int exec_mode_skip_prep;
   int exec_mode_QP_only;
   int exec_thread_num;
+  char *prog_name;
 } command_line_arguements;
 
 

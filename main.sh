@@ -26,8 +26,8 @@ genome="GRCh37"
 # input file names
 fasta_file="${DATA_DIR_ROOT}/${genome}.ch${chr}.fasta"
 hicRaw_dir="${DATA_DIR_ROOT}/GM12878_combined"
-kmerFreq_file="./tmp/GRCh37.ch21.r1000.k2.freq"
-hic_file="./tmp/chr21.m10000.M100000.VC.VC.hic"
+kmerFreq_file="./tmp/${genome}.ch${chr}.r${res}.k${k}.freq"
+hic_file="./tmp/chr21.m${min_size}.M${max_size}.${norm}.${exp}.hic"
 boostOracle_file=".stamps"
 
 # output

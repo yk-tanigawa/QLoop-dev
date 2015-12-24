@@ -15,137 +15,119 @@
 
 #include "cmd_args.h"
 #include "constant.h"
+#include "show_msg.h"
 #include "hic.h"
 #include "fasta.h"
 
-
-int show_usage(FILE *fp, const char *prog_name){
-  fprintf(fp, "%s:Info: Usage\n", prog_name);
-  return 0;
-}
-
-int show_error(FILE *fp,
-		const char *prog_name,
-		const char *errmsg){
-  fprintf(fp, "%s: error: %s\n", prog_name, errmsg);
-  return 0;
-}
-
-int show_warning(FILE *fp,
-		 const char *prog_name,
-		 const char *warnmsg){
-  fprintf(fp, "%s: warning: %s\n", prog_name, warnmsg);
-  return 0;
-}
-
-
-int main_sub(const command_line_arguements *args,
-	     const char *prog_name){
+int main_sub(const command_line_arguements *args){
 
   unsigned int **kmer_freq;
   hic *hic;
-  set_kmer_freq(args, &kmer_freq);
-  hic_prep(args, &hic);
-
+  {
+    set_kmer_freq(args, &kmer_freq);
+    hic_prep(args, &hic);
+    hic_check_kmer(hic, (const unsigned int **)kmer_freq, 
+		   args->prog_name);
+    hic_pack(hic, args->prog_name);
+  }
 
   return 0;
 }
 
 
 
-int check_args(const command_line_arguements *args,
-	       const char *prog_name){
+int check_args(const command_line_arguements *args){
   int errflag = 0;
 
   if(args->k <= 0){	       
-    show_error(stderr, prog_name, "k is not specified");
+    show_error(stderr, args->prog_name, "k is not specified");
     errflag++;
   }else if(errflag == 0){
-    fprintf(stderr, "%s: Info: k: %d\n", prog_name, args->k);
+    fprintf(stderr, "%s: info: k: %d\n", args->prog_name, args->k);
   }
 
   if(args->res <= 0){
-    show_error(stderr, prog_name, "resolution is not specified");
+    show_error(stderr, args->prog_name, "resolution is not specified");
     errflag++;
   }else if(errflag == 0){
-    fprintf(stderr, "%s: Info: resolution: %d\n", prog_name, args->res);
+    fprintf(stderr, "%s: info: resolution: %d\n", args->prog_name, args->res);
   }
 
   if(args->min_size <= 0){
-    show_error(stderr, prog_name, "minimum size is not specified");
+    show_error(stderr, args->prog_name, "minimum size is not specified");
     errflag++;
   }else if(errflag == 0){
-    fprintf(stderr, "%s: Info: minimum size: %d\n", prog_name, args->min_size);
+    fprintf(stderr, "%s: info: minimum size: %d\n", args->prog_name, args->min_size);
   }
 
   if(args->max_size <= 0){
-    show_error(stderr, prog_name, "maximum size is not specified");
+    show_error(stderr, args->prog_name, "maximum size is not specified");
     errflag++;
   }else if(errflag == 0){
-    fprintf(stderr, "%s: Info: maximum size: %d\n", prog_name, args->max_size);
+    fprintf(stderr, "%s: info: maximum size: %d\n", args->prog_name, args->max_size);
   }
 
   if(args->iteration_num <= 0){
-    show_error(stderr, prog_name, "iteration number is not specified");
+    show_error(stderr, args->prog_name, "iteration number is not specified");
     errflag++;
   }else if((unsigned long)(1 << (4 * args->k)) < args->iteration_num){
-    show_error(stderr, prog_name, "iteration number is invalid");
+    show_error(stderr, args->prog_name, "iteration number is invalid");
     fprintf(stderr, "number of weak lerners(T = %ld) exceeds 16^k (%d)\n",
 	    args->iteration_num, 1 << (4 * args->k));
     errflag++;
   }else if(errflag == 0){
-    fprintf(stderr, "%s: Info: number of iterations in AdaBoost: %ld\n",
-	    prog_name, args->iteration_num);
+    fprintf(stderr, "%s: info: number of iterations in AdaBoost: %ld\n",
+	    args->prog_name, args->iteration_num);
   }
 
   if(args->percentile <= 0){
-    show_error(stderr, prog_name, "percentile threshold is not specified");
+    show_error(stderr, args->prog_name, "percentile threshold is not specified");
     errflag++;
   }else if(errflag == 0){
-    fprintf(stderr, "%s: Info: percentile threshold: %e\n",
-	    prog_name, args->percentile);
+    fprintf(stderr, "%s: info: percentile threshold: %e\n",
+	    args->prog_name, args->percentile);
   }
 
   if(args->fasta_file != NULL){
-    fprintf(stderr, "%s: Info: fasta file: %s\n",
-	    prog_name, args->fasta_file);
+    fprintf(stderr, "%s: info: fasta file: %s\n",
+	    args->prog_name, args->fasta_file);
   }
 
   if(args->hicRaw_dir != NULL){
-    fprintf(stderr, "%s: Info: Hi-C raw data directory: %s/\n", 
-	    prog_name, args->hicRaw_dir);
+    fprintf(stderr, "%s: info: Hi-C raw data directory: %s/\n", 
+	    args->prog_name, args->hicRaw_dir);
   }
 
   if(args->kmerFreq_file != NULL){
-    fprintf(stderr, "%s: Info: k-mer frequency count file: %s\n", 
-	    prog_name, args->kmerFreq_file);
+    fprintf(stderr, "%s: info: k-mer frequency count file: %s\n", 
+	    args->prog_name, args->kmerFreq_file);
   }
 
   if(args->hic_file != NULL){
-    fprintf(stderr, "%s: Info: pre-processed Hi-C file: %s\n",
-	    prog_name, args->hic_file);
+    fprintf(stderr, "%s: info: pre-processed Hi-C file: %s\n",
+	    args->prog_name, args->hic_file);
   }
 
   if(args->boost_oracle_file != NULL){
-    fprintf(stderr, "%s: Info: oracle file for AdaBoost: %s\n",
-	    prog_name, args->boost_oracle_file);
+    fprintf(stderr, "%s: info: oracle file for AdaBoost: %s\n",
+	    args->prog_name, args->boost_oracle_file);
   }
 
   if(args->output_dir == NULL){
-    show_warning(stderr, prog_name, "output directory is not specified");
-    show_warning(stderr, prog_name, "results will be written to stdout");
+    show_warning(stderr, args->prog_name, "output directory is not specified");
+    show_warning(stderr, args->prog_name, "results will be written to stdout");
   }else if(errflag == 0){
-    fprintf(stderr, "%s: Info: output dir: %s/\n", 
-	    prog_name, args->output_dir);
+    fprintf(stderr, "%s: info: output dir: %s/\n", 
+	    args->prog_name, args->output_dir);
   }
 
   if(args->exec_thread_num > 0){	       
-    fprintf(stderr, "%s: Info: thread num: %d\n", 
-	    prog_name, args->exec_thread_num);
+    fprintf(stderr, "%s: info: thread num: %d\n", 
+	    args->prog_name, args->exec_thread_num);
   }
 
   if(errflag > 0){
-    show_usage(stderr, prog_name);
+    show_usage(stderr, args->prog_name);
     exit(EXIT_FAILURE);
   }
   return 0;
@@ -266,14 +248,19 @@ int main(int argc, char **argv){
     }
   }
 
-  check_args(args, argv[0]);
+  {
+    args->prog_name = calloc_errchk(strlen(argv[0]), sizeof(char),
+				    "args->prog_name");
+    strncpy(args->prog_name, argv[0], strlen(argv[0]));
+  }
 
   /* set exec_thread_num */
   if(args->exec_thread_num <= 0){
     args->exec_thread_num = (int)sysconf(_SC_NPROCESSORS_ONLN);
   }
 
-  main_sub(args, argv[0]);
+  check_args(args);
+  main_sub(args);
 
   free(args);
   return 0;

@@ -288,8 +288,9 @@ int hic_prep(const command_line_arguements *cmd_args,
 	       cmd_args->res,  cmd_args->chr,	       
 	       cmd_args->norm, cmd_args->exp,	       
 	       &raw);
-
-  fprintf(stderr, "Info: Hi-C: loaded Hi-C Raw file and normalization vector(s)\n");
+  
+  show_info(stderr, cmd_args->prog_name,
+	    "Hi-C: loaded Hi-C Raw file and normalization vector(s)");
 
   if(cmd_args->exec_thread_num >= 1){
     int i = 0;
@@ -367,11 +368,51 @@ int hic_prep(const command_line_arguements *cmd_args,
   *hic = raw->hic;
   free(raw);
 
-  fprintf(stderr, "Info: Hi-C: Completed Normalization O/E conversion\n");
+  show_info(stderr, cmd_args->prog_name,
+	    "Hi-C: Completed Normalization O/E conversion");
 
   return 0;
 }
 
+int hic_check_kmer(hic *data,
+		   const unsigned int **kmer_freq,
+		   const char *prog_name){
+  unsigned long x, count = 0;
+  for(x = 0; x < data->nrow; x++){
+    if((data->invalid)[x] == 0 && 
+       (kmer_freq[(data->i)[x]] == NULL ||
+	kmer_freq[(data->j)[x]] == NULL)){
+      (data->invalid)[x] = 1;
+      count++;
+    }
+  }
+  fprintf(stderr, "%s: info: hic_check_kmer: %ld data points eliminated because there is no corresponding k-mer frequency profile\n", 
+	  prog_name, count);
+	    
+  return 0;
+}
+
+int hic_pack(hic *data, 
+	     const char *prog_name){
+  unsigned long x = 0, y = 0;
+  while(x < data->nrow){
+    while((data->invalid)[x++] != 0 && x < data->nrow);
+    while((data->invalid)[x] == 0 && x < data->nrow){
+      (data->invalid)[y] = 0;
+      (data->i)[y] = (data->i)[x];
+      (data->j)[y] = (data->j)[x];
+      (data->mij)[y++] = (data->mij)[x++];
+    }
+  }
+  fprintf(stderr, "%s: info: hic_pack: %ld -> %ld\n", 
+	  prog_name, data->nrow, y);
+  data->i = realloc(data->i, y * sizeof(unsigned int));
+  data->j = realloc(data->j, y * sizeof(unsigned int));
+  data->mij = realloc(data->mij, y * sizeof(double));
+  data->invalid = realloc(data->invalid, y * sizeof(unsigned int));
+  data->nrow = y;
+  return 0;
+}
 
 #if 0
 int HicRead(const char *hic_file,

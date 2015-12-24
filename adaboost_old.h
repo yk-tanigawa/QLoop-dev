@@ -7,26 +7,6 @@
 #include "diffSec.h"
 #include "io.h"
 
-
-/* arguments for function hic_prep_thread */
-typedef struct _adaboost_compute_err{
-  /* thread specific info */
-  int thread_id;
-  unsigned long begin;
-  unsigned long end;
-  unsigned int *invalid;
-  unsigned int *l1;
-  unsigned int *m1;
-  unsigned int *l2;
-  unsigned int *m2;
-  unsigned int *sign;
-  double *beta;
-  double *weights;
-} adaboost_compute_err;
-
-
-
-#if 0
 #define BUF_SIZE 4096
 
 inline void adaDataOnTheFly(const int h_i,
@@ -219,5 +199,4 @@ int adaboostLearnOnTheFly(const unsigned int *y,
 }
 
 
-#endif
 #endif
