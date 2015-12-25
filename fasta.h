@@ -103,7 +103,7 @@ void *kmer_freq_count(void *args){
 	  params->thread_id, params->begin, params->end);  
 #endif
 
-  for(bin = params->begin; bin <= params->end + params-> k - 1; bin++){
+  for(bin = params->begin; bin <= params->end; bin++){
     contain_n = 0;
 
     /* check if this genome bin contains 'N' and allocate memory */

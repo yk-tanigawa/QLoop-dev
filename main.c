@@ -18,6 +18,7 @@
 #include "show_msg.h"
 #include "hic.h"
 #include "fasta.h"
+#include "adaboost.h"
 
 int main_sub(const command_line_arguements *args){
 

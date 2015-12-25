@@ -7,27 +7,156 @@
 #include "diffSec.h"
 #include "io.h"
 
+typedef struct _adaboost{
+  unsigned long *axis;
+  double *beta;
+  unsigned int *sign;
+} adaboost;
 
-/* arguments for function hic_prep_thread */
-typedef struct _adaboost_compute_err{
+/* arguments for function adaboost_comp_err */
+typedef struct _adaboost_comp_err_args{
   /* thread specific info */
   int thread_id;
   unsigned long begin;
   unsigned long end;
-  unsigned int *invalid;
+  /* shared param(s) */
+  unsigned long N;
+  /* shared data */
+  unsigned int **kmer_freq;
+  unsigned int *h_i;
+  unsigned int *h_j;
+  /* array with 0.5 * 16^k elements */
+  unsigned int *marked;
   unsigned int *l1;
   unsigned int *m1;
   unsigned int *l2;
   unsigned int *m2;
-  unsigned int *sign;
-  double *beta;
-  double *weights;
-} adaboost_compute_err;
+  double *err;
+  /* array with N elements */
+  double *p;
+  unsigned int *y;
+} adaboost_comp_err_args;
+
+void *adaboost_comp_err(void *args){
+  adaboost_comp_err_args *params = (adaboost_comp_err_args *)args;
+  unsigned int kmerpair = 0, x = 0, pred;
+ 
+#if 0
+  fprintf(stderr, "thread %d: start [%d : %d]\n",
+	  params->thread_id, params->begin, params->end);  
+#endif
+
+  for(kmerpair = params->begin; kmerpair <= params->end; kmerpair++){
+    (params->err)[kmerpair] = 0;
+  }
+  for(kmerpair = params->begin; kmerpair <= params->end; kmerpair++){
+    if(params->marked[kmerpair] == 0){
+      for(x = 0; x < params->N; x++){
+	pred = 
+	  (params->kmer_freq)[(params->h_i)[x]][(params->l1)[kmerpair]] * 
+	  (params->kmer_freq)[(params->h_j)[x]][(params->m1)[kmerpair]] +
+	  (params->kmer_freq)[(params->h_i)[x]][(params->l2)[kmerpair]] * 
+	  (params->kmer_freq)[(params->h_j)[x]][(params->m2)[kmerpair]];
+	if((params->y)[x] != (pred > 0 ? 1 : 0)){
+	  (params->err)[kmerpair] += (params->p)[x];
+	}
+      }
+    }
+  }  
+  return NULL;
+}
+
+int set_kmer_pairs(unsigned int k,
+		   unsigned int **l1,
+		   unsigned int **m1,
+		   unsigned int **l2,
+		   unsigned int **m2){
+  const unsigned int kmerpair_num = 1 << (4 * k - 1);  
+  {
+    *l1 = calloc_errchk(kmerpair_num, sizeof(unsigned int), "calloc l1");
+    *m1 = calloc_errchk(kmerpair_num, sizeof(unsigned int), "calloc m1");
+    *l2 = calloc_errchk(kmerpair_num, sizeof(unsigned int), "calloc l2");
+    *m2 = calloc_errchk(kmerpair_num, sizeof(unsigned int), "calloc m2");
+  }
+
+  /**
+   * need to fill four arrays
+   */
+
+  return 0;
+}
+
+int adaboost_learn(const command_line_arguements *cmd_args,
+		   unsigned int **kmer_freq,
+		   hic *hic,
+		   adaboost **model){
+  const unsigned long kmerpair_num = 1 << (4 * (cmd_args->k) - 1);  
+  unsigned int *marked, *l1, *l2, *m1, *m2, *y;
+  double *err, *w, *p, wsum, epsilon, min, max;
+
+  {
+    *model = calloc_errchk(1, sizeof(adaboost), "calloc adaboost");
+    marked = calloc_errchk(kmerpair_num, sizeof(unsigned int), "calloc: marked");
+    err = calloc_errchk(kmerpair_num, sizeof(double), "calloc: err");
+    y = calloc_errchk(hic->nrow, sizeof(unsigned int), "calloc: y");
+    p = calloc_errchk(hic->nrow, sizeof(double), "calloc: p");
+    set_kmer_pairs(cmd_args->k, &l1, &m1, &l2, &m2);
+  }
+
+  if(cmd_args->exec_thread_num >= 1){
+    int i = 0;
+    //    unsigned int t;
+    adaboost_comp_err_args *params;
+    pthread_t *threads = NULL;
+
+    {
+      params = calloc_errchk(cmd_args->exec_thread_num,			   
+			     sizeof(adaboost_comp_err_args),
+			     "calloc: adaboost_comp_err_args");
+      threads = calloc_errchk(cmd_args->exec_thread_num,			   
+			      sizeof(pthread_t),
+			      "calloc: threads");        
+      /* set variables */
+      for(i = 0; i < cmd_args->exec_thread_num; i++){
+	params[i].thread_id = i;
+	params[i].begin = ((i == 0) ? 0 : params[i - 1].end + 1);
+	params[i].end = ((i == (cmd_args->exec_thread_num - 1)) ?
+			 kmerpair_num :
+			 ((kmerpair_num / cmd_args->exec_thread_num) * (i + 1) - 1));
+	params[i].N = hic->nrow;
+	params[i].kmer_freq = kmer_freq;
+	params[i].h_i = hic->i;
+	params[i].h_j = hic->j;
+	params[i].marked = marked;
+	params[i].l1 = l1;
+	params[i].m1 = m1;
+	params[i].l2 = l2;
+	params[i].m2 = m2;
+	params[i].err = err;
+	params[i].p = p;
+	params[i].y = y;
+      }
+    }
+
+    /* pthread create */
+    for(i = 0; i < cmd_args->exec_thread_num; i++){
+      pthread_create(&threads[i], NULL, 
+		     adaboost_comp_err,
+		     (void*)&params[i]);
+    }
+    
+    /* pthread join */
+    for(i = 0; i < cmd_args->exec_thread_num; i++){
+      pthread_join(threads[i], NULL);
+    }
+  }
+
+  return 0;
+}
 
 
 
 #if 0
-#define BUF_SIZE 4096
 
 inline void adaDataOnTheFly(const int h_i,
 			    const int h_j,
