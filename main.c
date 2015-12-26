@@ -68,7 +68,7 @@ int main_sub(const command_line_arguements *args){
 		 (const unsigned int **)kmer_freq,
 		 hic,
 		 3.0,
-		 &model);
+		 &model, (const char *)NULL);
 #endif
   return 0;
 }

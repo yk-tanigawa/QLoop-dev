@@ -48,8 +48,9 @@ int adaboost_show_itr(FILE *fp,
 		      const unsigned int *m1,
 		      const unsigned int *l2,
 		      const unsigned int *m2,
-		      const unsigned long t){
-  fprintf(fp, "%ld\t%e\t%d\t%ld\t%s\t%s\t%s\t%s\n",
+		      const unsigned long t,
+		      double time){
+  fprintf(fp, "%ld\t%e\t%d\t%ld\t%s\t%s\t%s\t%s\t%f\t%f\n",
 	  t, 
 	  (model->beta)[t],
 	  (model->sign)[t],
@@ -57,7 +58,31 @@ int adaboost_show_itr(FILE *fp,
 	  kmer_strings[l1[(model->axis)[t]]],
 	  kmer_strings[m1[(model->axis)[t]]],
 	  kmer_strings[l2[(model->axis)[t]]],
-	  kmer_strings[m2[(model->axis)[t]]]);
+	  kmer_strings[m2[(model->axis)[t]]],
+	  time,
+	  time / (t + 1));
+  return 0;
+}
+
+int adaboost_show_all(FILE *fp, 
+		      const adaboost *model,
+		      const char **kmer_strings,
+		      const unsigned int *l1,
+		      const unsigned int *m1,
+		      const unsigned int *l2,
+		      const unsigned int *m2){
+  unsigned long t;
+  for(t = 0; t < model->T; t++){
+    fprintf(fp, "%ld\t%e\t%d\t%ld\t%s\t%s\t%s\t%s\n",
+	    t, 
+	    (model->beta)[t],
+	    (model->sign)[t],
+	    (model->axis)[t],
+	    kmer_strings[l1[(model->axis)[t]]],
+	    kmer_strings[m1[(model->axis)[t]]],
+	    kmer_strings[l2[(model->axis)[t]]],
+	    kmer_strings[m2[(model->axis)[t]]]);
+  }
   return 0;
 }
 		      
@@ -138,13 +163,15 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 		   const unsigned int **kmer_freq,
 		   hic *hic,
 		   const double threshold,
-		   adaboost **model){
+		   adaboost **model,
+		   const char *output_file){
   const unsigned long canonical_kmer_pair_num = 
     (1 << (4 * (cmd_args->k) - 1)) + (1 << (2 * (cmd_args->k) - 1));  
   unsigned long n, lm, argmin_lm, argmax_lm;
   unsigned int *marked, *l1, *l2, *m1, *m2, *y, pred;
   double *err, *w, *p, wsum, epsilon, min, max;
   char **kmer_strings;
+  struct timeval t0, time;
 
   /* allocate memory */
   {
@@ -201,6 +228,8 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	params[i].y = y;
       }
     }
+
+    gettimeofday(&t0, NULL);
 
     /* AdaBoost iterations */
     for(t = 0; t < cmd_args->iteration_num; t++){
@@ -286,8 +315,12 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	  }
 	}
       }
-      adaboost_show_itr(stderr, *model, (const char**)kmer_strings, l1, m1, l2, m2, t);
+      gettimeofday(&time, NULL);
+      adaboost_show_itr(stderr, *model, (const char**)kmer_strings, l1, m1, l2, m2, t, diffSec(t0, time));
     }
+  }
+  if(output_file == NULL){
+    adaboost_show_all(stderr, *model, (const char**)kmer_strings, l1, m1, l2, m2);
   }
 
   return 0;
