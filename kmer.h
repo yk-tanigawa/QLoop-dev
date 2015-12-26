@@ -8,9 +8,9 @@
 /* compute reverse complement of a given k-mer */
 unsigned long rev_comp(unsigned long kmer, 
 		       const unsigned int k){
-  long revComp = 0;
+  unsigned int i = 0;
+  unsigned long revComp = 0;
   kmer = ((~kmer) & ((1 << (2 * k)) - 1));
-  int i;
   for(i = 0; i <  k; i++){
     revComp <<= 2;
     revComp += (kmer & 3);
@@ -33,7 +33,7 @@ inline char Binary2char(const long binaryNum){
   }
 }
 
-int setKmerStrings(const int k,
+int set_kmer_strings(const int k,
 		   char ***kmerStrings){
   const unsigned long kmerNum = 1 << (2 * k);
   int i;
