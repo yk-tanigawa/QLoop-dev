@@ -12,7 +12,7 @@ DATA_DIR_ROOT="/data/yt"
 
 # parameters
 chr=21
-k=2
+k=4
 res=1000
 min_size=10000
 max_size=100000
@@ -50,4 +50,5 @@ ${DIR}/main \
     --hic ${hic_file} \
     --boostOracle ${boostOracle_file} \
     --out ${output_dir} \
-    --skipPrep 
+    --skipPrep \
+

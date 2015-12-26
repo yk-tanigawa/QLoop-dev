@@ -18,6 +18,7 @@
 #include "show_msg.h"
 #include "hic.h"
 #include "fasta.h"
+#include "threshold.h"
 #include "adaboost.h"
 
 int debug_dump_kmer_freq(const unsigned int **kmer_freq,
@@ -67,7 +68,7 @@ int main_sub(const command_line_arguements *args){
   adaboost_learn(args,
 		 (const unsigned int **)kmer_freq,
 		 hic,
-		 3.0,
+		 get_threshold(hic->mij, args->percentile, hic->nrow),
 		 &model, (const char *)NULL);
 #endif
   return 0;
