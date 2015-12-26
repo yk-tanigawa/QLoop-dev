@@ -35,11 +35,29 @@ typedef struct _adaboost_comp_err_args{
   unsigned int *m1;
   unsigned int *l2;
   unsigned int *m2;
-  double *err;
+  double **err;
   /* array with N elements */
   double *p;
   unsigned int *y;
 } adaboost_comp_err_args;
+
+inline unsigned long find_argmin(const double *ary,
+				 const unsigned int *mask,
+				 const unsigned long left,
+				 const unsigned long right){
+  unsigned long argmin = left,  index = left;
+#if 1
+  while(mask[index] != 0){
+    index++;
+  }
+#endif
+  for(index++; index <= right; index++){
+    if(mask[index] == 0 && ary[index] < ary[argmin]){
+      argmin = index;
+    }
+  }
+  return argmin;
+}
 
 int adaboost_show_itr(FILE *fp, 
 		      const adaboost *model,
@@ -66,12 +84,12 @@ void *adaboost_comp_err(void *args){
   unsigned int kmerpair = 0, x = 0, pred;
  
 #if 0
-  fprintf(stderr, "thread %d: start [%d : %d]\n",
+  fprintf(stderr, "thread %d: start [%ld : %ld]\n",
 	  params->thread_id, params->begin, params->end);  
 #endif
 
   for(kmerpair = params->begin; kmerpair <= params->end; kmerpair++){
-    (params->err)[kmerpair] = 0;
+    (*(params->err))[kmerpair] = 0;
   }
   for(kmerpair = params->begin; kmerpair <= params->end; kmerpair++){
     if(params->marked[kmerpair] == 0){
@@ -82,11 +100,22 @@ void *adaboost_comp_err(void *args){
 	  (params->kmer_freq)[(params->h_i)[x]][(params->l2)[kmerpair]] * 
 	  (params->kmer_freq)[(params->h_j)[x]][(params->m2)[kmerpair]];
 	if((params->y)[x] != (pred > 0 ? 1 : 0)){
-	  (params->err)[kmerpair] += (params->p)[x];
+	  (*(params->err))[kmerpair] += (params->p)[x];
 	}
       }
     }
+
+#if 0
+    fprintf(stderr, "%d\t%f\n",kmerpair, (*(params->err))[kmerpair]); 
+#endif
   }  
+
+#if 0
+  fprintf(stderr, "thread %d: end [%ld : %ld]\t%ld\n",
+	  params->thread_id, params->begin, params->end,
+	  find_argmin(*(params->err), params->marked, params->begin, params->end));
+#endif
+
   return NULL;
 }
 
@@ -128,9 +157,21 @@ int set_kmer_pairs(const unsigned int k,
   return 0;
 }
 
+int adaboost_set_y(hic *hic,
+		   const double threshold,
+		   unsigned int **y){
+  unsigned int x;
+  *y = calloc_errchk(hic->nrow, sizeof(unsigned int), "calloc: y");
+  for(x = 0; x < hic->nrow; x++){
+    (*y)[x] = (hic->mij)[x] > threshold ? 1 : 0; 
+  }
+  return 0;
+}
+
 int adaboost_learn(const command_line_arguements *cmd_args,
 		   const unsigned int **kmer_freq,
 		   hic *hic,
+		   const double threshold,
 		   adaboost **model){
   const unsigned long canonical_kmer_pair_num = 
     (1 << (4 * (cmd_args->k) - 1)) + (1 << (2 * (cmd_args->k) - 1));  
@@ -142,17 +183,35 @@ int adaboost_learn(const command_line_arguements *cmd_args,
   /* allocate memory */
   {
     *model = calloc_errchk(1, sizeof(adaboost), "calloc adaboost");
+    (*model)->axis = calloc_errchk(cmd_args->iteration_num, sizeof(unsigned long), "calloc adaboost -> axis");
+    (*model)->beta = calloc_errchk(cmd_args->iteration_num, sizeof(double), "calloc adaboost -> beta");
+    (*model)->sign = calloc_errchk(cmd_args->iteration_num, sizeof(unsigned int), "calloc adaboost -> sign");
+    (*model)->T = cmd_args->iteration_num;
     marked = calloc_errchk(canonical_kmer_pair_num, sizeof(unsigned int), "calloc: marked");
     set_kmer_pairs(cmd_args->k, &l1, &m1, &l2, &m2);
-    y = calloc_errchk(hic->nrow, sizeof(unsigned int), "calloc: y");
     err = calloc_errchk(canonical_kmer_pair_num, sizeof(double), "calloc: err");
     w = calloc_errchk(hic->nrow, sizeof(double), "calloc: p");
     p = calloc_errchk(hic->nrow, sizeof(double), "calloc: p");
     for(n = 0; n < hic->nrow; n++){
       w[n] = 1.0 / (hic->nrow);
     }
+    adaboost_set_y(hic, threshold, &y);
     set_kmer_strings(cmd_args->k, &kmer_strings);
   }
+
+
+#if 0
+  {
+    for(n = 0; n < canonical_kmer_pair_num; n++){
+      fprintf(stderr, "%s %s %s %s\n",
+	      kmer_strings[l1[n]],
+	      kmer_strings[m1[n]],
+	      kmer_strings[l2[n]],
+	      kmer_strings[m2[n]]);
+    }
+  }
+#endif
+
 
   if(cmd_args->exec_thread_num >= 1){
     int i = 0;
@@ -185,7 +244,7 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	params[i].m1 = m1;
 	params[i].l2 = l2;
 	params[i].m2 = m2;
-	params[i].err = err;
+	params[i].err = &err;
 	params[i].p = p;
 	params[i].y = y;
       }
@@ -200,12 +259,23 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	  wsum += w[n];
 	}
 	for(n = 0; n < (hic->nrow); n++){
-	  p[n] = w[n] / wsum;
+	  p[n] = 1.0 * w[n] / wsum;
 	}
       }
 
       /* step 2 : find the most appropriate axis (weak lerner) */
       {
+#if 0
+	{
+	  for(i = 0; i < 20; i++){
+	    fprintf(stderr, "%f ", err[i]);
+	  }
+	  fprintf(stderr, "\n");
+	}
+#endif
+
+
+#if 1
 	/* compute err for each kmer pair using pthread */
 	{
 	  /* pthread create */
@@ -217,6 +287,54 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	    pthread_join(threads[i], NULL);
 	  }
 	}
+#endif
+
+
+#if 0
+	{
+	  unsigned int x;
+	  for(lm = 0; lm < canonical_kmer_pair_num; lm++){
+	    if(marked[lm] == 0){
+	      err[lm] = 0;
+	      for(x = 0; x < hic->nrow; x++){
+		pred = 
+		  (kmer_freq[hic->i[x]][l1[lm]] * 
+		   kmer_freq[hic->j[x]][m1[lm]] +
+		   kmer_freq[hic->i[x]][l2[lm]] * 
+		   kmer_freq[hic->j[x]][m2[lm]]) > 0 ? 1 : 0;
+#if 0
+		fprintf(stderr, "%d", pred);
+#endif
+		if(y[x] != pred){
+		  err[lm] += p[x];
+		}
+	      }
+#if 0
+	      fprintf(stderr, "\n");
+	      fprintf(stderr, "%ld\t%s %s %s %s\t%f\n", 
+		      lm,
+		      kmer_strings[l1[lm]], 
+		      kmer_strings[m1[lm]], 
+		      kmer_strings[l2[lm]], 
+		      kmer_strings[m2[lm]],
+		      err[lm]);
+#endif
+	      
+	    }
+	  }
+	}
+#endif
+
+
+#if 0
+	{
+	  for(i = 0; i < 20; i++){
+	    fprintf(stderr, "%f ", err[i]);
+	  }
+	  fprintf(stderr, "\n");
+	}
+#endif
+
 	/* find best stamp */
 	{
 	  lm = 0;
@@ -269,8 +387,11 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	      kmer_freq[hic->i[n]][l2[((*model)->axis)[t]]] * 
 	      kmer_freq[hic->j[n]][m2[((*model)->axis)[t]]]) > 0) ? 1 : 0;
 	  if(((((*model)->sign)[t] == 0) && pred == y[n]) ||
-	     ((((*model)->sign)[t] == 1) && pred != y[n]))
+	     ((((*model)->sign)[t] == 1) && pred != y[n])){
 	    w[n] *= ((*model)->beta)[t];
+
+	    //	    fprintf(stderr, "%ld\t%e\n", n, w[n]);
+	  }
 	}
       }
       adaboost_show_itr(stderr, *model, (const char**)kmer_strings, l1, m1, l2, m2, t);

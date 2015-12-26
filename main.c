@@ -20,8 +20,38 @@
 #include "fasta.h"
 #include "adaboost.h"
 
+int debug_dump_kmer_freq(const unsigned int **kmer_freq,
+			 const unsigned int k,
+			 const int len){
+  int i, j;
+  for(i = 0; i < len; i++){
+    fprintf(stderr, "%d ", i);
+    
+    if(kmer_freq[i] == NULL){
+      fprintf(stderr, "*\n");
+    }else{
+      for(j = 0; j < (1 << (2 * k)); j++){
+	fprintf(stderr, "%d", kmer_freq[i][j] > 0 ? 1 : 0);
+      }
+      fprintf(stderr, "\n");
+    }
+  }
+  return 0;
+}
+
+
+
 int main_sub(const command_line_arguements *args){
 
+#if 0
+  unsigned int **kmer_freq;
+
+  set_kmer_freq(args, &kmer_freq);
+  
+  debug_dump_kmer_freq((const unsigned int **)kmer_freq, args->k, 100);
+#endif
+
+#if 1
   unsigned int **kmer_freq;
   hic *hic;
   adaboost *model;
@@ -33,11 +63,13 @@ int main_sub(const command_line_arguements *args){
     hic_pack(hic, args->prog_name);
   }
 
+
   adaboost_learn(args,
 		 (const unsigned int **)kmer_freq,
 		 hic,
+		 3.0,
 		 &model);
-
+#endif
   return 0;
 }
 

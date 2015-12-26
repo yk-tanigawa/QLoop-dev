@@ -50,4 +50,4 @@ ${DIR}/main \
     --hic ${hic_file} \
     --boostOracle ${boostOracle_file} \
     --out ${output_dir} \
-    --skipPrep
+    --skipPrep 

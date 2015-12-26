@@ -93,13 +93,14 @@ inline int c2i(const char c){
   }
 }
 
+#if 1
 void *kmer_freq_count(void *args){
   kmer_freq_count_args *params = (kmer_freq_count_args *)args;
   unsigned int bin = 0, i = 0, kmer = 0, contain_n = 0;
   const unsigned int bit_mask = (1 << (2 * (params->k))) - 1;
 
-#if 0
-  fprintf(stderr, "thread %d: start [%d : %d]\n",
+#if 1
+  fprintf(stderr, "thread %d: start [%ld : %ld]\n",
 	  params->thread_id, params->begin, params->end);  
 #endif
 
@@ -138,14 +139,90 @@ void *kmer_freq_count(void *args){
 	  i < (bin + 1) * params->res + params->k - 1; i++){
 	kmer <<= 2;
 	kmer += c2i((params->seq)[i]);
-	(*(params->kmer_freq))[(kmer & bit_mask)] += 1;
+	(*(params->kmer_freq))[bin][(kmer & bit_mask)] += 1;
       }
     }
   }
   return NULL;
 }
+#endif
 
+#if 1
 int set_kmer_freq(const command_line_arguements *cmd_args,
+		  unsigned int ***kmer_freq){
+  const unsigned int bit_mask = (1 << (2 * (cmd_args->k))) - 1;
+  char *seq_head, *seq;
+  unsigned long seq_len, bin_num, bin;
+  unsigned int i, contain_n, kmer;
+
+  /* read fasta file */
+  fasta_read(cmd_args->fasta_file, 
+	     &seq_head, &seq, &seq_len);
+
+  bin_num = (seq_len / cmd_args->res);
+
+  fprintf(stderr, "%s: info: sequence: %s (%ld : %ld)\n", 
+	  cmd_args->prog_name, seq_head, seq_len, bin_num);
+
+
+  /* allocate memory for k-mer frequency table */  
+  *kmer_freq = calloc_errchk(bin_num, sizeof(unsigned int *),
+			     "kmer_freq");			      
+  
+  /* count k-mer frequency */
+  for(bin = 0; bin < bin_num; bin++){
+    contain_n = 0;
+    for(i = bin * cmd_args->res; 
+	i < (bin + 1) * cmd_args->res + cmd_args->k - 1; i++){
+      if(seq[i] == 'N' || seq[i] == 'n'){	
+	contain_n = 1;
+	break;
+      }
+    }
+#if 0
+    fprintf(stderr, "%6ld : ", bin);
+#endif
+    if(contain_n != 0){
+#if 0
+      fprintf(stderr, "*\n");
+#endif
+      (*kmer_freq)[bin] = NULL;
+    }else{
+
+      /* For bins not containing 'N', allocate memory */
+      (*kmer_freq)[bin] = calloc_errchk((1 << (2 * (cmd_args->k))),
+					sizeof(unsigned int),
+					"calloc kmer_freq[]");
+      kmer = 0;
+      /* convert first (k-1)-mer to bit-encoded sequence */
+      for(i = bin * cmd_args->res;
+	  i < bin * cmd_args->res + cmd_args->k - 1; i++){
+	kmer <<= 2;
+	kmer += (c2i(seq[i]) & 3);
+      }
+      /* count k-mer frequency */
+      for(i = bin * cmd_args->res;
+	  i < (bin + 1) * cmd_args->res + cmd_args->k - 1; i++){
+	kmer <<= 2;
+	kmer += (c2i(seq[i]) & 3);
+	(*kmer_freq)[bin][(kmer & bit_mask)] += 1;
+      }
+#if 0
+      for(i = 0; i < (1 << ( 2 * (cmd_args->k))); i++){
+	fprintf(stderr, "%d", (*kmer_freq)[bin][i] > 0 ? 1 : 0);
+	//fprintf(stderr, "%d", (*kmer_freq)[bin][i]);
+      }
+      fprintf(stderr, "\n");
+#endif
+    }    
+  }
+
+  return 0;
+}
+#endif
+
+#if 1
+int set_kmer_freq_pthread(const command_line_arguements *cmd_args,
 		  unsigned int ***kmer_freq){
   char *seq_head, *seq;
   unsigned long seq_len, bin_num;
@@ -200,6 +277,22 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
     }
   }
 
+  {
+    unsigned int i, j;
+    for(i = 0; i < bin_num; i++){
+      fprintf(stderr, "%10d: ", i);
+      if(kmer_freq[i] != NULL){
+	for(j = 0; j < (1 << (2 * (cmd_args->k))); j++){
+	  fprintf(stderr, "%d", kmer_freq[i][j] > 0 ? 1 : 0);
+	}
+	fprintf(stderr, "\n");
+      }else{
+	fprintf(stderr, "*\n");
+      }
+    }
+  }
+
+
   free(seq);
   free(seq_head);
 
@@ -208,4 +301,5 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
 
   return 0;
 }
+#endif
 #endif
