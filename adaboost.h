@@ -7,7 +7,10 @@
 #include "diffSec.h"
 #include "io.h"
 
+
+/* adaboost results*/
 typedef struct _adaboost{
+  unsigned long T;
   unsigned long *axis;
   double *beta;
   unsigned int *sign;
@@ -66,12 +69,13 @@ void *adaboost_comp_err(void *args){
   return NULL;
 }
 
-int set_kmer_pairs(unsigned int k,
+int set_kmer_pairs(const unsigned int k,
 		   unsigned int **l1,
 		   unsigned int **m1,
 		   unsigned int **l2,
 		   unsigned int **m2){
-  const unsigned int kmerpair_num = 1 << (4 * k - 1);  
+  const unsigned long kmerpair_num = 1 << (4 * k - 1);  
+  const unsigned long kmer_num = 1 << (2 * k);
   {
     *l1 = calloc_errchk(kmerpair_num, sizeof(unsigned int), "calloc l1");
     *m1 = calloc_errchk(kmerpair_num, sizeof(unsigned int), "calloc m1");
@@ -79,10 +83,25 @@ int set_kmer_pairs(unsigned int k,
     *m2 = calloc_errchk(kmerpair_num, sizeof(unsigned int), "calloc m2");
   }
 
-  /**
-   * need to fill four arrays
-   */
-
+  {
+    unsigned long lm = 0, revcomp_lm = 0, next = 0;
+    for(lm = 0; lm < 1 << (4 * k); lm++){
+      revcomp_lm = rev_comp(lm, 2 * k);
+      if(lm <= revcomp_lm){
+	/**
+	 * where, l2 = rev_comp(m1, k)
+	 *        m2 = rev_comp(l1, k)
+	 * note:
+	 *        concat(l2 + m2) = rev_comp(concat(l1 + m1))
+	 */	
+	l1[next] = lm / kmer_num;
+	m1[next] = lm % kmer_num;
+	l2[next] = rev_comp / kmer_num;
+	m2[next] = rev_comp % kmer_num;
+	next++;
+      }
+    }
+  }
   return 0;
 }
 

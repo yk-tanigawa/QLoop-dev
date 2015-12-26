@@ -6,8 +6,8 @@
 #include "calloc_errchk.h"
 
 /* compute reverse complement of a given k-mer */
-long revComp(long kmer, 
-	     const int k){
+unsigned long rev_comp(unsigned long kmer, 
+		       const unsigned int k){
   long revComp = 0;
   kmer = ((~kmer) & ((1 << (2 * k)) - 1));
   int i;
