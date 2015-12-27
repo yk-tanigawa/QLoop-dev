@@ -64,18 +64,14 @@ int main_sub(const command_line_arguements *args){
 
   set_filenames(args, &fnames);
 
-  {
-    set_kmer_freq(args, &kmer_freq);
-    hic_prep(args, &hic);
-    hic_check_kmer(hic, (const unsigned int **)kmer_freq, 
-		   args->prog_name);
-    hic_pack(hic, args->prog_name);    
-  }
+  set_kmer_freq(args, &kmer_freq);
+  hic_prep(args, &hic);
+  hic_check_kmer(hic, (const unsigned int **)kmer_freq, args->prog_name);
+  hic_pack(hic, args->prog_name);    
+
 
   set_canonical_kmer_pairs(args->k, &kp);
   set_thresholds(hic->mij, 1000, hic->nrow, &th);
-
-  //  dump_thresholds(stderr, th);
   write_histo(args, th, fnames->histo);
 
   adaboost_learn(args,
@@ -91,6 +87,8 @@ int main_sub(const command_line_arguements *args){
 	  kp,
 	  model,
 	  &P, &q, 
+	  get_threshold(args, th, 0.005),
+	  get_threshold(args, th, 0.995),
 	  fnames->qp_P,
 	  fnames->qp_q);
   return 0;

@@ -89,9 +89,9 @@ double get_threshold(const command_line_arguements *cmd_args,
 		     double percentile){
   int index = (int)(th->nclass * percentile + 0.5);
 
-  fprintf(stderr, "%s: info: threshold: %d %% percentile = %f\n",
+  fprintf(stderr, "%s: info: threshold: %e percentile = %f\n",
 	  cmd_args->prog_name, 
-	  (int)(100 * percentile), (th->representatives)[index]);
+	  percentile, (th->representatives)[index]);
 
   return (th->representatives)[index];  
 }

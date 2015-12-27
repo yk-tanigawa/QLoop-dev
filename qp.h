@@ -38,6 +38,8 @@ int qp_prep(const command_line_arguements *cmd_args,
 	    adaboost *model,
 	    double ***P,
 	    double **q,
+	    double mij_min,
+	    double mij_max,
 	    const char *qp_file_P,
 	    const char *qp_file_q){
   unsigned long stamp, x, i, j;
@@ -59,20 +61,22 @@ int qp_prep(const command_line_arguements *cmd_args,
   }
 
   for(x = 0; x < data->nrow; x++){
-    for(stamp = 0; stamp < model->T; stamp++){
-      pair_freq[stamp] =
-	kmer_freq[data->i[x]][kp->l1[model->axis[stamp]]] * 
-	kmer_freq[data->j[x]][kp->m1[model->axis[stamp]]] +
-	kmer_freq[data->i[x]][kp->l2[model->axis[stamp]]] * 
-	kmer_freq[data->j[x]][kp->m2[model->axis[stamp]]];
-    }
-    for(i = 0; i < model->T; i++){
-      for(j = 0; j < model->T; j++){
-	(*P)[i][j] += pair_freq[i] * pair_freq[j];
+    if(mij_min <= data->mij[x] && data->mij[x] <= mij_max){
+      for(stamp = 0; stamp < model->T; stamp++){
+	pair_freq[stamp] =
+	  kmer_freq[data->i[x]][kp->l1[model->axis[stamp]]] * 
+	  kmer_freq[data->j[x]][kp->m1[model->axis[stamp]]] +
+	  kmer_freq[data->i[x]][kp->l2[model->axis[stamp]]] * 
+	  kmer_freq[data->j[x]][kp->m2[model->axis[stamp]]];
       }
-    }
-    for(i = 0; i < model->T; i++){
-      (*q)[i] -= data->mij[x] * pair_freq[i];
+      for(i = 0; i < model->T; i++){
+	for(j = 0; j < model->T; j++){
+	  (*P)[i][j] += pair_freq[i] * pair_freq[j];
+	}
+      }
+      for(i = 0; i < model->T; i++){
+	(*q)[i] -= data->mij[x] * pair_freq[i];
+      }
     }
   }
 
