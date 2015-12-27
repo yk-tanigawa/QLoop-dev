@@ -21,6 +21,22 @@ int dump_thresholds(FILE *fp,
   return 0;
 }
 
+int write_histo(const command_line_arguements *cmd_args,
+		thresholds *th,
+		const char *out_file){
+  FILE *fp;
+  if((fp = fopen(out_file, "w")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    out_file, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+  fprintf(stderr, "%s: info: histo: writing histogram to file: %s\n",
+	  cmd_args->prog_name, out_file);
+  dump_thresholds(fp, th);
+  fclose(fp);
+  return 0;
+}
+
 int double_comp(const void *cmp1,
 		const void *cmp2){
   double d1 = *((double *)cmp1);

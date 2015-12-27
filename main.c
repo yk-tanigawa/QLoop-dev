@@ -15,6 +15,7 @@
 
 #include "cmd_args.h"
 #include "constant.h"
+#include "filename.h"
 #include "show_msg.h"
 #include "hic.h"
 #include "fasta.h"
@@ -59,6 +60,9 @@ int main_sub(const command_line_arguements *args){
   canonical_kp *kp;
   thresholds *th;
   double **P, *q;
+  filenames *fnames;
+
+  set_filenames(args, &fnames);
 
   {
     set_kmer_freq(args, &kmer_freq);
@@ -71,24 +75,24 @@ int main_sub(const command_line_arguements *args){
   set_canonical_kmer_pairs(args->k, &kp);
   set_thresholds(hic->mij, 1000, hic->nrow, &th);
 
-  dump_thresholds(stderr, th);
+  //  dump_thresholds(stderr, th);
+  write_histo(args, th, fnames->histo);
 
   adaboost_learn(args,
 		 (const unsigned int **)kmer_freq,
 		 hic,
 		 get_threshold(args, th, args->percentile),
 		 kp,
-		 &model, 
-		 "./test.stamps");
+		 &model,
+		 fnames->adaboost);
   qp_prep(args,
 	  (const unsigned int **)kmer_freq,
 	  hic,
 	  kp,
 	  model,
 	  &P, &q, 
-	  "./test.P",
-	  "./test.q");
-
+	  fnames->qp_P,
+	  fnames->qp_q);
   return 0;
 }
 
