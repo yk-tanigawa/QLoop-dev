@@ -80,6 +80,7 @@ int main_sub(const command_line_arguements *args){
   qp_prep(args,
 	  (const unsigned int **)kmer_freq,
 	  hic,
+	  kp,
 	  &P, &q, (const char *)NULL);
 
 #endif
