@@ -14,22 +14,6 @@ all: main
 main: main.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
-prep: prep.o
-	$(LD) $(LDFLAGS) -o $@ $^
-
-kmerFreqOdds: kmerFreqOdds.o
-	$(LD) $(LDFLAGS) -o $@ $^
-
-kmerPairBoost: kmerPairBoost.o
-	$(LD) $(LDFLAGS) -o $@ $^
-
-kmerPairBoost.o: adaboost.h calloc_errchk.h io.h diffSec.h
-
-adaboost.h: calloc_errchk.h diffSec.h
-
-chrom: chrom.o
-	$(LD) $(LDFLAGS) -o $@ $^
-
 clean:
 	$(RM) $(OBJS) $(EXEC) *~
 
