@@ -183,7 +183,7 @@ int adaboostLearnOnTheFly(const unsigned int *y,
     
     gettimeofday(&time, NULL);
     
-    fprintf(stderr, "%ld\t%e\t(%ld, %d)\t%e\t%e\n",
+    fprntf(stderr, "%ld\t%e\t(%ld, %d)\t%e\t%e\n",
 	    t, (*adaBeta)[t], (*adaAxis)[t], (*adaSign)[t],
 	    diffSec(timePrev, time), diffSec(timeStart, time));	       
 

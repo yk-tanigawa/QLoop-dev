@@ -24,8 +24,8 @@ int show_warning(FILE *fp,
 }
 
 int show_info(FILE *fp,
-		 const char *prog_name,
-		 const char *msg){
+	      const char *prog_name,
+	      const char *msg){
   fprintf(fp, "%s: info: %s\n", prog_name, msg);
   return 0;
 }

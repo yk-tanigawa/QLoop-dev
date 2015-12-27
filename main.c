@@ -53,11 +53,11 @@ int main_sub(const command_line_arguements *args){
   debug_dump_kmer_freq((const unsigned int **)kmer_freq, args->k, 100);
 #endif
 
-#if 1
   unsigned int **kmer_freq;
   hic *hic;
   adaboost *model;
   canonical_kp *kp;
+  thresholds *th;
   double **P, *q;
 
   {
@@ -69,21 +69,26 @@ int main_sub(const command_line_arguements *args){
   }
 
   set_canonical_kmer_pairs(args->k, &kp);
+  set_thresholds(hic->mij, 1000, hic->nrow, &th);
+
+  dump_thresholds(stderr, th);
 
   adaboost_learn(args,
 		 (const unsigned int **)kmer_freq,
 		 hic,
-		 get_threshold(hic->mij, args->percentile, hic->nrow),
+		 get_threshold(args, th, args->percentile),
 		 kp,
 		 &model, 
-		 (const char *)NULL);
+		 "./test.stamps");
   qp_prep(args,
 	  (const unsigned int **)kmer_freq,
 	  hic,
 	  kp,
-	  &P, &q, (const char *)NULL);
+	  model,
+	  &P, &q, 
+	  "./test.P",
+	  "./test.q");
 
-#endif
   return 0;
 }
 

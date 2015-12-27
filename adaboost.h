@@ -41,6 +41,34 @@ typedef struct _adaboost_comp_err_args{
   unsigned int *y;
 } adaboost_comp_err_args;
 
+
+int adaboost_show_itr(FILE *fp, 
+		      const adaboost *model,
+		      const char **kmer_strings,
+		      const canonical_kp *kp,
+		      const unsigned long t,
+		      double time);
+
+int adaboost_show_all(FILE *fp, 
+		      const adaboost *model,
+		      const char **kmer_strings,
+		      const canonical_kp *kp);
+
+void *adaboost_comp_err(void *args);
+
+int adaboost_set_y(hic *hic,
+		   const double threshold,
+		   unsigned int **y);
+
+int adaboost_learn(const command_line_arguements *cmd_args,
+		   const unsigned int **kmer_freq,
+		   hic *hic,
+		   const double threshold,
+		   const canonical_kp *kp,
+		   adaboost **model,
+		   const char *output_file);
+
+
 int adaboost_show_itr(FILE *fp, 
 		      const adaboost *model,
 		      const char **kmer_strings,
@@ -272,11 +300,28 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	}
       }
       gettimeofday(&time, NULL);
-      adaboost_show_itr(stderr, *model, (const char**)kmer_strings, kp, t, diffSec(t0, time));
+      adaboost_show_itr(stderr, 
+			*model, (const char**)kmer_strings, kp, 
+			t, diffSec(t0, time));
     }
   }
-  if(output_file == NULL){
-    adaboost_show_all(stderr, *model, (const char**)kmer_strings, kp);
+  
+  /* write to file OR stderr */
+  {
+    if(output_file == NULL){
+      adaboost_show_all(stderr, *model, (const char**)kmer_strings, kp);
+    }else{
+      FILE *fp;
+      if((fp = fopen(output_file, "w")) == NULL){
+	fprintf(stderr, "error: fopen %s\n%s\n",
+		output_file, strerror(errno));
+	exit(EXIT_FAILURE);
+      }
+      fprintf(stderr, "%s: info: AdaBoost: writing results to file: %s\n",
+	      cmd_args->prog_name, output_file);
+      adaboost_show_all(fp, *model, (const char**)kmer_strings, kp);
+      fclose(fp);
+    }
   }
 
   return 0;
