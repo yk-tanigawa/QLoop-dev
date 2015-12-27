@@ -1,14 +1,17 @@
 #!/bin/sh
 
-make clean
-make main
+#$ -m bes
+
+#$ -S /bin/sh
+#$ -cwd
+#$ -V
+#$ -q 24core.q
+
+#$ -l fc=18
+#$ -l mf=2G
 
 prog_name="ChromLoopC"
-version="v0.20"
-
-DIR="."
-DATA_DIR_ROOT="/data/yt"
-
+version="v0.21"
 
 # parameters
 chr=21
@@ -20,18 +23,35 @@ iteration_num=100
 percentile=0.8
 norm="KR"
 exp=${norm}
+DATA_DIR_ROOT="/data/yt"
 genome="GRCh37"
+
+DIR="/work2/yt/${prog_name}"
 
 ##########################
 # input file names
 fasta_file="${DATA_DIR_ROOT}/${genome}.ch${chr}.fasta"
 hicRaw_dir="${DATA_DIR_ROOT}/GM12878_combined"
-kmerFreq_file="./tmp/${genome}.ch${chr}.r${res}.k${k}.freq"
-hic_file="./tmp/chr21.m${min_size}.M${max_size}.${norm}.${exp}.hic"
-boostOracle_file=".stamps"
+kmerFreq_file="${DIR}/tmp/${genome}.ch${chr}.r${res}.k${k}.freq"
+hic_file="${DIR}/tmp/chr21.m${min_size}.M${max_size}.${norm}.${exp}.hic"
+boostOracle_file="hoge.oracle"
 
 # output
-output_dir="./${version}/"
+output_dir="${DATA_DIR_ROOT}/${prog_name}/${version}/"
+
+##########################
+
+cat $0
+cd ${DIR}
+
+git log --oneline --graph --decorate -n3
+git checkout ${version}
+git log --oneline --graph --decorate -n3
+make clean
+make main
+
+if [ ! -e ${output_dir} ]; then mkdir ${output_dir}; fi
+
 
 
 ${DIR}/main \
@@ -50,5 +70,6 @@ ${DIR}/main \
     --hic ${hic_file} \
     --boostOracle ${boostOracle_file} \
     --out ${output_dir} \
-    --skipPrep \
+    --skipPrep 
 
+git checkout master
