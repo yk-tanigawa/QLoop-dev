@@ -44,10 +44,7 @@ typedef struct _adaboost_comp_err_args{
 int adaboost_show_itr(FILE *fp, 
 		      const adaboost *model,
 		      const char **kmer_strings,
-		      const unsigned int *l1,
-		      const unsigned int *m1,
-		      const unsigned int *l2,
-		      const unsigned int *m2,
+		      const canonical_kp *kp,
 		      const unsigned long t,
 		      double time){
   fprintf(fp, "%ld\t%e\t%d\t%ld\t%s\t%s\t%s\t%s\t%f\t%f\n",
@@ -55,10 +52,10 @@ int adaboost_show_itr(FILE *fp,
 	  (model->beta)[t],
 	  (model->sign)[t],
 	  (model->axis)[t],
-	  kmer_strings[l1[(model->axis)[t]]],
-	  kmer_strings[m1[(model->axis)[t]]],
-	  kmer_strings[l2[(model->axis)[t]]],
-	  kmer_strings[m2[(model->axis)[t]]],
+	  kmer_strings[kp->l1[(model->axis)[t]]],
+	  kmer_strings[kp->m1[(model->axis)[t]]],
+	  kmer_strings[kp->l2[(model->axis)[t]]],
+	  kmer_strings[kp->m2[(model->axis)[t]]],
 	  time,
 	  time / (t + 1));
   return 0;
@@ -67,10 +64,7 @@ int adaboost_show_itr(FILE *fp,
 int adaboost_show_all(FILE *fp, 
 		      const adaboost *model,
 		      const char **kmer_strings,
-		      const unsigned int *l1,
-		      const unsigned int *m1,
-		      const unsigned int *l2,
-		      const unsigned int *m2){
+		      const canonical_kp *kp){
   unsigned long t;
   for(t = 0; t < model->T; t++){
     fprintf(fp, "%ld\t%e\t%d\t%ld\t%s\t%s\t%s\t%s\n",
@@ -78,10 +72,10 @@ int adaboost_show_all(FILE *fp,
 	    (model->beta)[t],
 	    (model->sign)[t],
 	    (model->axis)[t],
-	    kmer_strings[l1[(model->axis)[t]]],
-	    kmer_strings[m1[(model->axis)[t]]],
-	    kmer_strings[l2[(model->axis)[t]]],
-	    kmer_strings[m2[(model->axis)[t]]]);
+	    kmer_strings[kp->l1[(model->axis)[t]]],
+	    kmer_strings[kp->m1[(model->axis)[t]]],
+	    kmer_strings[kp->l2[(model->axis)[t]]],
+	    kmer_strings[kp->m2[(model->axis)[t]]]);
   }
   return 0;
 }
@@ -110,44 +104,6 @@ void *adaboost_comp_err(void *args){
   return NULL;
 }
 
-int set_kmer_pairs(const unsigned int k,
-		   unsigned int **l1,
-		   unsigned int **m1,
-		   unsigned int **l2,
-		   unsigned int **m2){
-  const unsigned long kmer_num = 1 << (2 * k);
-  const unsigned long kmer_pair_num = 1 << (4 * k);
-  const unsigned long canonical_kmer_pair_num = (1 << (4 * k - 1)) + (1 << (2 * k - 1));  
-
-  {
-    *l1 = calloc_errchk(canonical_kmer_pair_num, sizeof(unsigned int), "calloc l1");
-    *m1 = calloc_errchk(canonical_kmer_pair_num, sizeof(unsigned int), "calloc m1");
-    *l2 = calloc_errchk(canonical_kmer_pair_num, sizeof(unsigned int), "calloc l2");
-    *m2 = calloc_errchk(canonical_kmer_pair_num, sizeof(unsigned int), "calloc m2");
-  }
-
-  {
-    unsigned long lm = 0, revcomp_lm = 0, next = 0;
-    for(lm = 0; lm < kmer_pair_num; lm++){
-      revcomp_lm = rev_comp(lm, 2 * k);
-      if(lm <= revcomp_lm){
-	/**
-	 * where, l2 = rev_comp(m1, k)
-	 *        m2 = rev_comp(l1, k)
-	 * note:
-	 *        concat(l2 + m2) = rev_comp(concat(l1 + m1))
-	 */	
-	(*l1)[next] = lm / kmer_num;
-	(*m1)[next] = lm % kmer_num;
-	(*l2)[next] = revcomp_lm / kmer_num;
-	(*m2)[next] = revcomp_lm % kmer_num;
-	next++;
-      }
-    }
-  }
-  return 0;
-}
-
 int adaboost_set_y(hic *hic,
 		   const double threshold,
 		   unsigned int **y){
@@ -163,12 +119,13 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 		   const unsigned int **kmer_freq,
 		   hic *hic,
 		   const double threshold,
+		   const canonical_kp *kp,
 		   adaboost **model,
 		   const char *output_file){
   const unsigned long canonical_kmer_pair_num = 
     (1 << (4 * (cmd_args->k) - 1)) + (1 << (2 * (cmd_args->k) - 1));  
   unsigned long n, lm, argmin_lm, argmax_lm;
-  unsigned int *marked, *l1, *l2, *m1, *m2, *y, pred;
+  unsigned int *marked, *y, pred;
   double *err, *w, *p, wsum, epsilon, min, max;
   char **kmer_strings;
   struct timeval t0, time;
@@ -181,7 +138,6 @@ int adaboost_learn(const command_line_arguements *cmd_args,
     (*model)->sign = calloc_errchk(cmd_args->iteration_num, sizeof(unsigned int), "calloc adaboost -> sign");
     (*model)->T = cmd_args->iteration_num;
     marked = calloc_errchk(canonical_kmer_pair_num, sizeof(unsigned int), "calloc: marked");
-    set_kmer_pairs(cmd_args->k, &l1, &m1, &l2, &m2);
     err = calloc_errchk(canonical_kmer_pair_num, sizeof(double), "calloc: err");
     w = calloc_errchk(hic->nrow, sizeof(double), "calloc: p");
     p = calloc_errchk(hic->nrow, sizeof(double), "calloc: p");
@@ -219,10 +175,10 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	params[i].h_i = hic->i;
 	params[i].h_j = hic->j;
 	params[i].marked = marked;
-	params[i].l1 = l1;
-	params[i].m1 = m1;
-	params[i].l2 = l2;
-	params[i].m2 = m2;
+	params[i].l1 = kp->l1;
+	params[i].m1 = kp->m1;
+	params[i].l2 = kp->l2;
+	params[i].m2 = kp->m2;
 	params[i].err = &err;
 	params[i].p = p;
 	params[i].y = y;
@@ -305,10 +261,10 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	((*model)->beta)[t] = epsilon / (1 - epsilon);
 	for(n = 0; n < hic->nrow; n++){
 	  pred = 
-	    ((kmer_freq[hic->i[n]][l1[((*model)->axis)[t]]] * 
-	      kmer_freq[hic->j[n]][m1[((*model)->axis)[t]]] +
-	      kmer_freq[hic->i[n]][l2[((*model)->axis)[t]]] * 
-	      kmer_freq[hic->j[n]][m2[((*model)->axis)[t]]]) > 0) ? 1 : 0;
+	    ((kmer_freq[hic->i[n]][kp->l1[((*model)->axis)[t]]] * 
+	      kmer_freq[hic->j[n]][kp->m1[((*model)->axis)[t]]] +
+	      kmer_freq[hic->i[n]][kp->l2[((*model)->axis)[t]]] * 
+	      kmer_freq[hic->j[n]][kp->m2[((*model)->axis)[t]]]) > 0) ? 1 : 0;
 	  if(((((*model)->sign)[t] == 0) && pred == y[n]) ||
 	     ((((*model)->sign)[t] == 1) && pred != y[n])){
 	    w[n] *= ((*model)->beta)[t];
@@ -316,11 +272,11 @@ int adaboost_learn(const command_line_arguements *cmd_args,
 	}
       }
       gettimeofday(&time, NULL);
-      adaboost_show_itr(stderr, *model, (const char**)kmer_strings, l1, m1, l2, m2, t, diffSec(t0, time));
+      adaboost_show_itr(stderr, *model, (const char**)kmer_strings, kp, t, diffSec(t0, time));
     }
   }
   if(output_file == NULL){
-    adaboost_show_all(stderr, *model, (const char**)kmer_strings, l1, m1, l2, m2);
+    adaboost_show_all(stderr, *model, (const char**)kmer_strings, kp);
   }
 
   return 0;

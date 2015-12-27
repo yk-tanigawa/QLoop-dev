@@ -12,12 +12,12 @@ DATA_DIR_ROOT="/data/yt"
 
 # parameters
 chr=21
-k=4
+k=2
 res=1000
 min_size=10000
 max_size=100000
 iteration_num=100
-percentile=0.5
+percentile=0.8
 norm="KR"
 exp=${norm}
 genome="GRCh37"

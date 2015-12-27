@@ -57,6 +57,7 @@ int main_sub(const command_line_arguements *args){
   unsigned int **kmer_freq;
   hic *hic;
   adaboost *model;
+  canonical_kp *kp;
   double **P, *q;
 
   {
@@ -64,14 +65,18 @@ int main_sub(const command_line_arguements *args){
     hic_prep(args, &hic);
     hic_check_kmer(hic, (const unsigned int **)kmer_freq, 
 		   args->prog_name);
-    hic_pack(hic, args->prog_name);
+    hic_pack(hic, args->prog_name);    
   }
+
+  set_canonical_kmer_pairs(args->k, &kp);
 
   adaboost_learn(args,
 		 (const unsigned int **)kmer_freq,
 		 hic,
 		 get_threshold(hic->mij, args->percentile, hic->nrow),
-		 &model, (const char *)NULL);
+		 kp,
+		 &model, 
+		 (const char *)NULL);
   qp_prep(args,
 	  (const unsigned int **)kmer_freq,
 	  hic,
