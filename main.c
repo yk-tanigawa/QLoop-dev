@@ -20,6 +20,7 @@
 #include "fasta.h"
 #include "threshold.h"
 #include "adaboost.h"
+#include "qp.h"
 
 int debug_dump_kmer_freq(const unsigned int **kmer_freq,
 			 const unsigned int k,
@@ -56,6 +57,8 @@ int main_sub(const command_line_arguements *args){
   unsigned int **kmer_freq;
   hic *hic;
   adaboost *model;
+  double **P, *q;
+
   {
     set_kmer_freq(args, &kmer_freq);
     hic_prep(args, &hic);
@@ -64,12 +67,16 @@ int main_sub(const command_line_arguements *args){
     hic_pack(hic, args->prog_name);
   }
 
-
   adaboost_learn(args,
 		 (const unsigned int **)kmer_freq,
 		 hic,
 		 get_threshold(hic->mij, args->percentile, hic->nrow),
 		 &model, (const char *)NULL);
+  qp_prep(args,
+	  (const unsigned int **)kmer_freq,
+	  hic,
+	  &P, &q, (const char *)NULL);
+
 #endif
   return 0;
 }
