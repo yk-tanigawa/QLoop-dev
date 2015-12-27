@@ -11,7 +11,7 @@
 #$ -l mf=2G
 
 prog_name="ChromLoopC"
-version="v0.21"
+version="v0.22"
 
 # parameters
 chr=21
@@ -21,6 +21,7 @@ min_size=10000
 max_size=100000
 iteration_num=100
 percentile=0.8
+percent=80
 norm="KR"
 exp=${norm}
 DATA_DIR_ROOT="/data/yt"
@@ -39,6 +40,16 @@ boostOracle_file="hoge.oracle"
 # output
 output_dir="${DATA_DIR_ROOT}/${prog_name}/${version}/"
 
+max_kb=`expr ${max_size} / 1000`
+min_kb=`expr ${min_size} / 1000`
+res_kb=`expr ${res} / 1000`
+
+stamps="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.stamps"
+QP_P="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.P"
+QP_q="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.q"
+QP_out="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.QP"
+results="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.results"
+
 ##########################
 
 cat $0
@@ -52,7 +63,7 @@ make main
 
 if [ ! -e ${output_dir} ]; then mkdir ${output_dir}; fi
 
-
+${DIR}/main -v
 
 ${DIR}/main \
     --chr ${chr} \
@@ -73,3 +84,9 @@ ${DIR}/main \
     --skipPrep 
 
 git checkout master
+
+/work2/yt/QuadProg-example/QPwithFile \
+    ${QP_P} ${QP_q} ${iteration_num} > \
+    ${QP_out}
+
+paste ${QP_out} ${stamps} ${results}
