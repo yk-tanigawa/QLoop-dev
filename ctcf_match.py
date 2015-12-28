@@ -1,4 +1,4 @@
-import sys;
+import sys, string;
 
 def enumerate_substr(sequence, k):
     substr = set([]);
@@ -39,9 +39,12 @@ def seed_match(seedset):
         seedmatch = [str(kmer in seedset) for kmer in kmerpair[5:9]]
         print '\t'.join(kmerpair + seedmatch);
         
+def revcomp(sequence):
+    return string.translate(sequence[::-1], string.maketrans("ACGT", "TGCA"))
 
 def main(argv):
-    targets = ["CCGCGNGGNGGCAG"];
+    ctcf = "CCGCGNGGNGGCAG";
+    targets = [ctcf, revcomp(ctcf)];
     seed_set = prep_seed_set(targets, 4);
     seed_match(seed_set);
 
