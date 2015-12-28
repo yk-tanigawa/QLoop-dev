@@ -2,4 +2,4 @@
 
 R --vanilla --slave \
     --args $1 \
-    < kmerPairPlot.R 
+    < plots.R 

@@ -11,7 +11,7 @@
 #$ -l mf=2G
 
 prog_name="ChromLoopC"
-version="v0.22"
+version="v0.23"
 
 # parameters
 chr=21
@@ -44,6 +44,7 @@ max_kb=`expr ${max_size} / 1000`
 min_kb=`expr ${min_size} / 1000`
 res_kb=`expr ${res} / 1000`
 
+histo="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.histo"
 stamps="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.stamps"
 QP_P="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.P"
 QP_q="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.q"
@@ -83,10 +84,14 @@ ${DIR}/main \
     --out ${output_dir} \
     --skipPrep 
 
-git checkout master
+${DIR}/histo.sh ${histo}
 
 /work2/yt/QuadProg-example/QPwithFile \
     ${QP_P} ${QP_q} ${iteration_num} > \
     ${QP_out}
 
-paste ${QP_out} ${stamps} ${results}
+paste ${QP_out} ${stamps} > ${results}
+
+${DIR}/plots.sh ${results}
+
+git checkout master

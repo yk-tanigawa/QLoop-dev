@@ -10,9 +10,8 @@
 #include "cmd_args.h"
 #include "mywc.h"
 #include "calloc_errchk.h"
-#include "io.h"
 #include "diffSec.h"
-
+#include "io.h"
 
 /* normalized O/E converted Hi-C data */
 typedef struct _hic {

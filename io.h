@@ -1,7 +1,6 @@
 #ifndef __io_H__
 #define __io_H__
 
-#include "io_freq.h"
 #include "hic.h"
 #include "mywc.h"
 #include "calloc_errchk.h"
