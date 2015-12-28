@@ -236,7 +236,7 @@ int main(int argc, char **argv){
 	show_usage(stdout, argv[0]);
 	exit(EXIT_SUCCESS);
       case 'v': /* version*/
-	fprintf(stdout, "version: 0.23\n");
+	fprintf(stdout, "version: 0.24\n");
 	exit(EXIT_SUCCESS);
       /* parameters */
       case 'c': /* chr */
