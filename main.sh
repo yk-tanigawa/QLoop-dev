@@ -11,7 +11,7 @@
 #$ -l mf=2G
 
 prog_name="ChromLoopC"
-version="v0.23"
+version="v0.24"
 
 # parameters
 chr=21
@@ -50,6 +50,7 @@ QP_P="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_k
 QP_q="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.q"
 QP_out="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.QP"
 results="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.results"
+results_filtered="${output_dir}chr21.m${min_kb}k.M${max_kb}k.${norm}.${exp}.k${k}.res${res_kb}k.p${percent}.T${iteration_num}.results.filtered"
 
 ##########################
 
@@ -92,6 +93,9 @@ ${DIR}/histo.sh ${histo}
 
 paste ${QP_out} ${stamps} > ${results}
 
-${DIR}/plots.sh ${results}
+cat ${results} | grep -v 'GATC' | \
+    python ./ctcf_match.py > ${results_filtered}
+    
+${DIR}/plots.sh ${results_filtered}
 
 git checkout master
