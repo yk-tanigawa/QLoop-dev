@@ -45,7 +45,7 @@ def revcomp(sequence):
 def main(argv):
     ctcf = "CCGCGNGGNGGCAG";
     targets = [ctcf, revcomp(ctcf)];
-    seed_set = prep_seed_set(targets, 4);
+    seed_set = prep_seed_set(targets, int(argv[1]));
     seed_match(seed_set);
 
 if __name__ == "__main__":
