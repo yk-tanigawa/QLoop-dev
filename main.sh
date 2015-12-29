@@ -11,11 +11,11 @@
 #$ -l mf=2G
 
 prog_name="ChromLoopC"
-version="v0.25"
+version="v0.30"
 
 # parameters
 chr=21
-k=2
+k=4
 res=1000
 min_size=10000
 max_size=100000
@@ -58,7 +58,7 @@ cat $0
 cd ${DIR}
 
 git log --oneline --graph --decorate -n3
-git checkout ${version}
+# git checkout ${version}
 git log --oneline --graph --decorate -n3
 make clean
 make main
@@ -98,4 +98,4 @@ cat ${results} | grep -v 'GATC' | \
     
 ${DIR}/plots.sh ${results_filtered}
 
-git checkout master
+# git checkout master

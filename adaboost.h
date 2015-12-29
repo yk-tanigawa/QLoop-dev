@@ -176,6 +176,52 @@ int adaboost_learn(const command_line_arguements *cmd_args,
     set_kmer_strings(cmd_args->k, &kmer_strings);
   }
 
+  /* mark k-mer pairs containing forbidden k-mers */
+  {
+    unsigned int mask, m;
+    unsigned int forbidden_kmer[1] = {141}; /* GATC */
+    unsigned int forbidden_kmer_len[1] = {4};
+    unsigned int forbidden_kmer_num = 1;
+    for(lm = 0; lm < canonical_kmer_pair_num; lm++){
+      for(m = 0; m < forbidden_kmer_num; m++){
+	if(marked[lm] != 0){
+	  break;
+	}else{
+	  mask = (1 << (2 * forbidden_kmer_len[m])) - 1;
+	  for(n = 0; 
+	      n < cmd_args->k - forbidden_kmer_len[m] + 1;
+	      n++){
+	    if(      (((kp->l1[lm]) >> (2 * n)) & mask) == forbidden_kmer[m]){
+	      marked[lm] = 1;
+	      break;
+	    }else if((((kp->m1[lm]) >> (2 * n)) & mask) == forbidden_kmer[m]){
+	      marked[lm] = 1;
+	      break;
+	    }else if((((kp->l2[lm]) >> (2 * n)) & mask) == forbidden_kmer[m]){
+	      marked[lm] = 1;
+	      break;
+	    }else if((((kp->m2[lm]) >> (2 * n)) & mask) == forbidden_kmer[m]){	
+	      marked[lm] = 1;
+	      break;
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+  {
+    n = 0;
+    for(lm = 0; lm < canonical_kmer_pair_num; lm++){
+      if(marked[lm] != 0){
+	n++;
+      }
+    }
+    fprintf(stderr, "%s: info: AdaBoost: %ld out of %ld k-mer pairs are filtered out\n",
+	    cmd_args->prog_name, n, canonical_kmer_pair_num);
+  }
+
+
   if(cmd_args->exec_thread_num >= 1){
     int i = 0;
     unsigned long t;
