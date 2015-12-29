@@ -11,7 +11,7 @@
 #$ -l mf=2G
 
 prog_name="ChromLoopC"
-version="v0.24"
+version="v0.25"
 
 # parameters
 chr=21
@@ -94,7 +94,7 @@ ${DIR}/histo.sh ${histo}
 paste ${QP_out} ${stamps} > ${results}
 
 cat ${results} | grep -v 'GATC' | \
-    python ./ctcf_match.py > ${results_filtered}
+    python ./ctcf_match.py ${k} > ${results_filtered}
     
 ${DIR}/plots.sh ${results_filtered}
 
