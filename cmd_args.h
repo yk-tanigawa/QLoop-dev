@@ -19,6 +19,7 @@ typedef struct _command_line_arguements {
   char *kmerFreq_file;
   char *hic_file;
   char *boost_oracle_file;
+  char *interval_file;
   /* output */
   char *output_dir;
   /* exec_mode */

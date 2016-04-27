@@ -6,6 +6,7 @@
 #include "mywc.h"
 #include "calloc_errchk.h"
 #include "diffSec.h"
+#include "io.h"
 
 /**
  * This header file contains some functions to perform the following tasks
@@ -100,6 +101,9 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
   char *seq_head, *seq;
   unsigned long seq_len, bin_num, bin;
   unsigned int i, contain_n, kmer;
+  int *interval;
+  unsigned long interval_num;
+  unsigned long interval_i = 0;
 
   /* read fasta file */
   fasta_read(cmd_args->fasta_file, 
@@ -114,40 +118,66 @@ int set_kmer_freq(const command_line_arguements *cmd_args,
   /* allocate memory for k-mer frequency table */  
   *kmer_freq = calloc_errchk(bin_num, sizeof(unsigned int *),
 			     "kmer_freq");			      
-  
-  /* count k-mer frequency */
-  for(bin = 0; bin < bin_num; bin++){
-    contain_n = 0;
-    for(i = bin * cmd_args->res; 
-	i < (bin + 1) * cmd_args->res + cmd_args->k - 1; i++){
-      if(seq[i] == 'N' || seq[i] == 'n'){	
-	contain_n = 1;
-	break;
-      }
-    }
-    if(contain_n != 0){
-      (*kmer_freq)[bin] = NULL;
-    }else{
 
-      /* For bins not containing 'N', allocate memory */
-      (*kmer_freq)[bin] = calloc_errchk((1 << (2 * (cmd_args->k))),
-					sizeof(unsigned int),
-					"calloc kmer_freq[]");
-      kmer = 0;
-      /* convert first (k-1)-mer to bit-encoded sequence */
-      for(i = bin * cmd_args->res;
-	  i < bin * cmd_args->res + cmd_args->k - 1; i++){
-	kmer <<= 2;
-	kmer += (c2i(seq[i]) & 3);
+  /* get genomic intervals of interest */
+  read_int(cmd_args->interval_file,
+	   &interval, &interval_num);
+
+  /* count k-mer frequency */
+  for(bin = 1; bin < bin_num - 1; bin++){
+    /* [1, bin_num - 1) is because we check adjascent bins to calc. k-mer freq */
+
+    if((interval_i >= interval_num) ||
+       (((interval_i % 2) == 0) && (((int)bin) < interval[interval_i]))){
+      /*
+       * *kmer_freq_vector will be NULL if either of the following holds
+       * 1] We already checked all the intervals of interest
+       * 2] We are waiting for a next interval ( interval_i % 2 == 0) and
+       *    this bin is still not in the next interval (bin < interval[interval_i])
+       */
+      (*kmer_freq)[bin] = NULL;
+
+    }else{           
+      if(((int)bin) == interval[interval_i]){
+	/*
+	 * If this bin is at the boundary of the current interval, 
+	 * increment the index variable interval_i
+	 */
+	interval_i++;
       }
-      /* count k-mer frequency */
-      for(i = bin * cmd_args->res;
-	  i < (bin + 1) * cmd_args->res + cmd_args->k - 1; i++){
-	kmer <<= 2;
-	kmer += (c2i(seq[i]) & 3);
-	(*kmer_freq)[bin][(kmer & bit_mask)] += 1;
+
+      contain_n = 0;
+      for(i = (bin - 1)* cmd_args->res; 
+	  i < (bin + 2) * cmd_args->res + cmd_args->k - 1; i++){
+	if(seq[i] == 'N' || seq[i] == 'n'){	
+	  contain_n = 1;
+	  break;
+	}
       }
-    }    
+      if(contain_n != 0){
+	(*kmer_freq)[bin] = NULL;
+      }else{
+	
+	/* For bins not containing 'N', allocate memory */
+	(*kmer_freq)[bin] = calloc_errchk((1 << (2 * (cmd_args->k))),
+					  sizeof(unsigned int),
+					  "calloc kmer_freq[]");
+	kmer = 0;
+	/* convert first (k-1)-mer to bit-encoded sequence */
+	for(i = (bin - 1) * cmd_args->res;
+	    i < (bin - 1)* cmd_args->res + cmd_args->k - 1; i++){
+	  kmer <<= 2;
+	  kmer += (c2i(seq[i]) & 3);
+	}
+	/* count k-mer frequency */
+	for(;
+	    i < (bin + 2) * cmd_args->res + cmd_args->k - 1; i++){
+	  kmer <<= 2;
+	  kmer += (c2i(seq[i]) & 3);
+	  (*kmer_freq)[bin][(kmer & bit_mask)] += 1;
+	}
+      }    
+    }
   }
 
   return 0;

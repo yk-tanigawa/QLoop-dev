@@ -173,6 +173,11 @@ int check_args(const command_line_arguements *args){
 	    args->prog_name, args->boost_oracle_file);
   }
 
+  if(args->interval_file != NULL){
+    fprintf(stderr, "%s: info: interval file to specify the region of interest: %s\n",
+	    args->prog_name, args->interval_file);
+  }
+
   if(args->output_dir == NULL){
     show_warning(stderr, args->prog_name, "output directory is not specified");
     show_warning(stderr, args->prog_name, "results will be written to stdout");
@@ -216,6 +221,7 @@ int main(int argc, char **argv){
     {"kmerFreq",      required_argument, NULL, 'f'},
     {"hic",           required_argument, NULL, 'H'},
     {"boostOracle",   required_argument, NULL, 'O'},
+    {"interval",      required_argument, NULL, 'I'},
     /* output */
     {"out",           required_argument, NULL, 'o'},
     /* exec_mode */
@@ -284,6 +290,9 @@ int main(int argc, char **argv){
 	break;
       case 'O': /* boostOracle */
 	args->boost_oracle_file = optarg;
+	break;
+      case 'I': /* interval */
+	args->interval_file = optarg;
 	break;
       /* output */
       case 'o': /* out */

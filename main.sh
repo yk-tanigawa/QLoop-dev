@@ -40,6 +40,7 @@ hicRaw_dir="${DATA_DIR_ROOT}/GM12878_combined"
 kmerFreq_file="${DIR}/tmp/${genome}.ch${chr}.r${res}.k${k}.freq"
 hic_file="${DIR}/tmp/chr21.m${min_size}.M${max_size}.${norm}.${exp}.hic"
 boostOracle_file="hoge.oracle"
+interval_file="/home/yt/data/Encode/wgEncodeAwgDnaseMasterSites.chr21.res1000.interval"
 
 # output
 output_dir="${DATA_DIR_ROOT}/${prog_name}/${version}/"
@@ -86,6 +87,7 @@ ${DIR}/main \
     --kmerFreq ${kmerFreq_file} \
     --hic ${hic_file} \
     --boostOracle ${boostOracle_file} \
+    --interval ${interval_file} \
     --out ${output_dir} \
     --skipPrep 
 

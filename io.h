@@ -34,5 +34,33 @@ int read_double(const char *fileName,
   return 0;
 }
 
+int read_int(const char *fileName,
+	     int **array,
+	     unsigned long *len){
+  {
+    *len = mywc(fileName);
+    *array = calloc_errchk(*len, sizeof(int), "error(calloc) read_int");
+  }
+
+  {
+    FILE *fp;
+    unsigned long i = 0;
+    char buf[BUF_SIZE];
+
+    if((fp = fopen(fileName, "r")) == NULL){
+      fprintf(stderr, "error: fopen %s\n%s\n",
+	      fileName, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+
+    while(fgets(buf, BUF_SIZE, fp) != NULL && i < *len){
+      (*array)[i++] = atoi(buf);
+    }
+
+    fclose(fp);
+  }
+
+  return 0;
+}
 
 #endif
