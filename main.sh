@@ -10,7 +10,11 @@
 #$ -l fc=18
 #$ -l mf=2G
 
-prog_name="ChromLoopC"
+########################################################################
+# This is a wrapper script to run the main program of QLoop-dev
+########################################################################
+
+prog_name="QLoop-dev"
 version="v0.30"
 
 # parameters
