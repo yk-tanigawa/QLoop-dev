@@ -15,15 +15,15 @@
 ########################################################################
 
 prog_name="QLoop-dev"
-version="v0.30"
+version="v0.41"
 
 # parameters
 chr=21
-k=4
+k=5
 res=1000
 min_size=10000
 max_size=100000
-iteration_num=100
+iteration_num=1000
 percentile=0.8
 percent=80
 norm="KR"
@@ -40,7 +40,7 @@ hicRaw_dir="${DATA_DIR_ROOT}/GM12878_combined"
 kmerFreq_file="${DIR}/tmp/${genome}.ch${chr}.r${res}.k${k}.freq"
 hic_file="${DIR}/tmp/chr21.m${min_size}.M${max_size}.${norm}.${exp}.hic"
 boostOracle_file="hoge.oracle"
-interval_file="/home/yt/data/Encode/wgEncodeAwgDnaseMasterSites.chr21.res1000.interval"
+interval_file="/home/yt/data/Encode/wgEncodeAwgDnaseMasterSites.chr21.res1000.mar0.interval"
 
 # output
 output_dir="${DATA_DIR_ROOT}/${prog_name}/${version}/"
@@ -63,12 +63,12 @@ cat $0
 cd ${DIR}
 
 git log --oneline --graph --decorate -n3
-# git checkout ${version}
+git checkout ${version}
 git log --oneline --graph --decorate -n3
 make clean
 make main
 
-if [ ! -e ${output_dir} ]; then mkdir ${output_dir}; fi
+if [ ! -e ${output_dir} ]; then mkdir -p ${output_dir}; fi
 
 ${DIR}/main -v
 
@@ -104,4 +104,4 @@ cat ${results} | grep -v 'GATC' | \
     
 ${DIR}/plots.sh ${results_filtered}
 
-# git checkout master
+git checkout master

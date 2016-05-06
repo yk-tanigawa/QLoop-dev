@@ -25,9 +25,8 @@ use Getopt::Long qw(:config posix_default no_ignore_case gnu_compat);
 #
 #######################################################
 
-
 # set resolution (size of the bin) from command line option
-my $res = 0, $margin = 0;
+my $res = 0, $margin = 0, $sep = "\n";
 GetOptions('res=i' => \$res, 'margin=i' => \$margin);
 
 if ($res > 0){
@@ -36,25 +35,32 @@ if ($res > 0){
     my $prev_left = -1, $prev_right = -1;
     # set decoy params
     
-    foreach(<>) {
+    foreach(<STDIN>){
+
 	chomp;
 	@entry = split(/\t/, $_);
 	$left  = int(($entry[0] - $margin) / $res);
 	$right = int(($entry[1] + $margin) / $res);       
+
 	if(($left - 1) <= $prev_right){
 	    # there is an overlap between two intervals
 	    # or two intervals are adjacent to each other
 	    $prev_right = $right;
 	    # merge two intervals
+
 	}else{ # there is no overlap	    
 	    if($prev_right >= 0){
-		print $prev_left, "\t", $prev_right, "\n";
+		print STDOUT $prev_left, $sep, $prev_right, "\n";
 		# print the previous interval
 	    }
 	    $prev_left = $left;
 	    $prev_right = $right;
+
 	}
     }
-    print $prev_left, "\t", $prev_right, "\n";
-    # print the last interval
+    
+    if($prev_left != -1){
+	print STDOUT $prev_left, $sep, $prev_right, "\n";
+	# print the last interval
+    }
 }
