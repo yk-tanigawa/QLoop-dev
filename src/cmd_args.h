@@ -130,7 +130,7 @@ int cmd_args_chk(const cmd_args *args){
     errflag++;
   }else if(errflag == 0){
     fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "%s : %s\n", "out_file", args->out_file);
+    fprintf(stderr, "%s : %s.{pri, sec}\n", "out_file", args->out_file);
   }
 
   /* saved results */
