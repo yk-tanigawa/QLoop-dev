@@ -9,7 +9,10 @@ EXEC = $(SRCS:.c=)
 RM = rm -f
 
 
-all: main
+all: twin
+
+twin: twin.o
+	$(LD) $(LDFLAGS) -o $@ $^
 
 main: main.o
 	$(LD) $(LDFLAGS) -o $@ $^
