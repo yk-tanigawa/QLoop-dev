@@ -1,8 +1,37 @@
 import numpy as np
 import pandas as pd
-import sys
-import argparse
+from itertools import groupby
+import sys, argparse, gzip
+import logging
 import math
+
+# Fasta IO
+def fasta_iter(fasta_name):
+    '''
+    given a fasta file. yield tuples of header, sequence
+    modified from Brent Pedersen
+    Correct Way To Parse A Fasta File In Python
+    https://www.biostars.org/p/710/
+    '''
+    if((fasta_name[-3:] == '.gz') or 
+       (fasta_name[-5:] == '.gzip')):
+        with gzip.open(fasta_name, 'rb') as f:
+            data = (x[1] for x in groupby(f, lambda line: line.decode('utf-8')[0] == ">"))
+            for header in data:
+                header = header.__next__().decode('utf-8')[1:].strip()
+                seq = "".join(s.decode('utf-8').strip() for s in data.__next__())
+                yield(header, seq)
+    else:
+        with open(fasta_name) as f:
+            # ditch the boolean (x[0]) and just keep the header or sequence since
+            # we know they alternate.
+            data = (x[1] for x in groupby(f, lambda line: line[0] == ">"))
+            for header in data:
+                # drop the ">"
+                header = header.__next__()[1:].strip()
+                # join all sequence lines to one.
+                seq = "".join(s.strip() for s in data.__next__())
+                yield(header, seq)
 
 def lenstr2int(lenstr):
     # This function convers human friendly 
@@ -26,22 +55,37 @@ def bed_set(bedfile, chromosome, res):
             bed_set.add(i)
     return(bed_set)
 
-def main_sub(infile, outfile, chromosome, 
-             res, minsize, maxsize, 
-             bedfile, normfile, expfile,
+def hic_prep(logger, 
+             infile, outfile, chromosome, 
+             res, margin, minsize, maxsize, 
+             fastafile, bedfile, normfile, expfile,             
              log, distnorm):
 
     # read files
+    if(fastafile != None):
+        seqs = {}
+        for (head, seq) in fasta_iter(fastafile):
+            seqs[head] = seq
+        fasta = [('N' not in seqs[chromosome][max(0, bin * res - margin) : 
+                                              min(1 + int(len(seqs[chromosome]) / res),
+                                                  (bin + 1) * res + margin)].upper()) for 
+                 bin in range(1 + int(len(seqs[chromosome]) / res))]
+        fasta[0] = fasta[-1] = False
+        logger.debug('Fasta file has been loaded')
 
     if(bedfile != None):
         bed = bed_set(bedfile, chromosome, res)
+        logger.debug('BED file has been loaded')
     if(normfile != None):
         norm = np.loadtxt(normfile)
+        logger.debug('normalization vector file has been loaded')
     if(expfile != None):
         exp  = np.loadtxt(expfile)
+        logger.debug('expected value vector file has been loaded')
 
     data_obs = pd.read_table(infile, 
                             names = ['i', 'j', 'mij_raw'])
+    logger.debug('raw data file has been loaded')
 
     # extract relevant data points
 
@@ -49,14 +93,29 @@ def main_sub(infile, outfile, chromosome,
     j = np.array(data_obs['j'])
     dist = abs(i - j)
 
-    if(bedfile != None):
-        data_filtered = data_obs[(minsize <= dist) & 
-                                 (dist <= maxsize) & 
-                                 np.array([int(pos / res) in bed for pos in i]) &
-                                 np.array([int(pos / res) in bed for pos in j])]
+    if(fastafile != None):
+        if(bedfile != None):
+            data_filtered = data_obs[(minsize <= dist) & 
+                                     (dist <= maxsize) & 
+                                     np.array([fasta[int(pos / res)] for pos in i]) &
+                                     np.array([fasta[int(pos / res)] for pos in j]) &
+                                     np.array([int(pos / res) in bed for pos in i]) &
+                                     np.array([int(pos / res) in bed for pos in j])]
+        else:
+            data_filtered = data_obs[(minsize <= dist) & 
+                                     (dist <= maxsize) &
+                                     np.array([fasta[int(pos / res)] for pos in i]) &
+                                     np.array([fasta[int(pos / res)] for pos in j])]
     else:
-        data_filtered = data_obs[(minsize <= dist) & 
-                                 (dist <= maxsize)]
+        if(bedfile != None):
+            data_filtered = data_obs[(minsize <= dist) & 
+                                     (dist <= maxsize) & 
+                                     np.array([int(pos / res) in bed for pos in i]) &
+                                     np.array([int(pos / res) in bed for pos in j])]
+        else:
+            data_filtered = data_obs[(minsize <= dist) & 
+                                     (dist <= maxsize)]
+    logger.debug('relevant data points are extracted')
 
     # convert raw observed contact frequencies
 
@@ -89,14 +148,37 @@ def main_sub(infile, outfile, chromosome,
     else:
         results = data
 
+    logger.debug('data conversion is finished')
+
     if(outfile != None):
+        logger.debug('writing the results to {}'.format(outfile))
         results.to_csv(outfile, index = False, header = False, sep = '\t')
 
+def hic_prep_args_dump(logger, 
+                       infile, outfile, chromosome, 
+                       res, margin, minsize, maxsize, 
+                       fastafile, bedfile, normfile, expfile,             
+                       log, distnorm):
+    logger.info('infile     : {}'.format(infile))
+    logger.info('outfile    : {}'.format(outfile))
+    logger.info('chromosome : {}'.format(chromosome))
+    logger.info('resolution : {}'.format(res))
+    logger.info('margin     : {}'.format(margin))
+    logger.info('min size   : {}'.format(minsize))
+    logger.info('max size   : {}'.format(maxsize))
+    logger.info('fasta file : {}'.format(fastafile))
+    logger.info('bed file   : {}'.format(bedfile))
+    logger.info('norm. file : {}'.format(normfile))
+    logger.info('exp. file  : {}'.format(expfile))
+    logger.info('log conv.  : {}'.format(log))
+    logger.info('normalize  : {}'.format(distnorm))
+    
 
-def main():
+def hic_prep_main():
+    ## argparse
     parser = argparse.ArgumentParser(description='Hi-C prep')
 
-    parser.add_argument('--version', action='version', version='%(prog)s 2016-05-23')
+    parser.add_argument('--version', action='version', version='%(prog)s 2016-05-24')
 
     parser.add_argument('-i', '--input',
                         metavar = 'i', default = None, required = True,
@@ -114,6 +196,10 @@ def main():
                         metavar = 'r', default = None, required = True,
                         help = 'resolution')
 
+    parser.add_argument('-a', '--margin',
+                        metavar = 'a', default = None, 
+                        help = 'margin')
+
     parser.add_argument('-m', '--min',
                         metavar = 'm', default = 0,
                         help = 'min (default = {})'.format(0))
@@ -121,6 +207,10 @@ def main():
     parser.add_argument('-M', '--max',
                         metavar = 'M', default = sys.maxsize,
                         help = 'Max (default = {})'.format(sys.maxsize))
+
+    parser.add_argument('-f', '--fasta',
+                        metavar = 'f', default = None,
+                        help = 'Fasta file (to check gap)')
 
     parser.add_argument('-b', '--bed',
                         metavar = 'b', default = None,
@@ -142,30 +232,57 @@ def main():
                         default = False,
                         help = 'convert distribution to N(0, 1)')
 
+    parser.add_argument('-v', '--verbose', type = int,
+                        metavar = 'v', default = logging.DEBUG,
+                        help = 'verbose level (default : {})'.format(logging.DEBUG))
 
     args = parser.parse_args()
 
+    ## logging
+    # create logger
+    logger = logging.getLogger('logger')
+    logger.setLevel(args.verbose)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(ch)
+
+
+    logger.debug('Hello. Starting the program.')
     
+    hic_prep_args_dump(logger     = logger,
+                       infile     = args.input, 
+                       outfile    = args.output,
+                       chromosome = args.chr, 
+                       res        = lenstr2int(args.res),
+                       margin     = lenstr2int(args.margin),
+                       minsize    = lenstr2int(args.min),
+                       maxsize    = lenstr2int(args.max), 
+                       fastafile  = args.fasta,
+                       bedfile    = args.bed,
+                       normfile   = args.norm,
+                       expfile    = args.exp,
+                       log        = args.log,
+                       distnorm   = args.distnorm)
 
-    print(args.input)
-    print(args.output)
-    print(args.chr)
-    print(lenstr2int(args.res))
-    print(lenstr2int(args.min))
-    print(lenstr2int(args.max))
-    print(args.bed)
-    print(args.norm)
-    print(args.exp)
-    print(args.log)
-    print(args.distnorm)
-
-
-    main_sub(infile     = args.input, 
+    hic_prep(logger     = logger, 
+             infile     = args.input, 
              outfile    = args.output,
              chromosome = args.chr, 
              res        = lenstr2int(args.res),
+             margin     = lenstr2int(args.margin),
              minsize    = lenstr2int(args.min),
              maxsize    = lenstr2int(args.max), 
+             fastafile  = args.fasta,
              bedfile    = args.bed,
              normfile   = args.norm,
              expfile    = args.exp,
@@ -174,4 +291,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    hic_prep_main()
