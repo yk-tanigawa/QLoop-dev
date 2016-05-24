@@ -11,6 +11,8 @@ RM = rm -f
 
 all: twin
 
+twin.o: src/cmd_args.h src/fasta.h
+
 twin: twin.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
