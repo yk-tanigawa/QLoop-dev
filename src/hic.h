@@ -42,7 +42,7 @@ int hic_read(const cmd_args *args,
   /* read from a file */
   {
     FILE *fp;
-    char buf[256], tmp_mij_str[64];
+    char buf[BUF_SIZE], tmp_mij_str[BUF_SIZE];
     unsigned int tmp_i = 0, tmp_j = 0;
     unsigned long row = 0;
 
