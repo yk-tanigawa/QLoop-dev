@@ -15,10 +15,10 @@ typedef struct _cmd_args {
   int margin;
   int iter1;
   int iter2;
-  char *eliminate;
   /* input */
   char *fasta_file;
   char *hic_file;
+  char *kmer_pair;
   /* output */
   char *out_file;
   /* saved results */
@@ -41,7 +41,7 @@ int show_usage(FILE *fp,
   fprintf(fp, "%s [INFO] ", prog_name);
   fprintf(fp, "usage:\n");
   fprintf(fp, 
-	  "%s -k k --res r [--margin M] --iter1 n --iter2 m [--eliminate e] --fasta f --hic H --out o [--pri p] [--sec s] [--verbose V] --thread_num t \n",
+	  "%s -k k --res r [--margin M] --iter1 n --iter2 m --fasta f --hic H --kmer c --out o [--pri p] [--sec s] [--verbose V] --thread_num t \n",
 	  prog_name);
   return 0;
 }
@@ -96,12 +96,6 @@ int cmd_args_chk(const cmd_args *args){
     fprintf(stderr, "%s : %d\n", "iter2", args->iter2);
   }
 
-  if(args->eliminate != NULL && errflag == 0){
-    fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "%s : %s\n", "eliminate", args->eliminate);
-  }
-
-
   /* input */
 
   if(args->fasta_file == NULL){
@@ -120,6 +114,15 @@ int cmd_args_chk(const cmd_args *args){
   }else if(errflag == 0){
     fprintf(stderr, "%s [INFO] ", args->prog_name);
     fprintf(stderr, "%s : %s\n", "hic_file", args->hic_file);
+  }
+
+  if(args->kmer_pair == NULL){
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "k-mer pair file is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %s\n", "kmer_pair", args->kmer_pair);
   }
 
   /* output */
@@ -178,10 +181,10 @@ int cmd_args_parse(const int argc, char **argv,
     {"margin",    required_argument, NULL, 'M'},
     {"iter1",     required_argument, NULL, 'n'},
     {"iter2",     required_argument, NULL, 'm'},
-    {"eliminate", required_argument, NULL, 'e'},
     /* input */
     {"fasta",     required_argument, NULL, 'f'},
     {"hic",       required_argument, NULL, 'H'},
+    {"kmer",      required_argument, NULL, 'c'},
     /* output */
     {"out",       required_argument, NULL, 'o'},
     /* saved results*/
@@ -196,7 +199,7 @@ int cmd_args_parse(const int argc, char **argv,
   *args = calloc_errchk(1, sizeof(cmd_args), 
 			"calloc: command line args");
 
-  while((opt = getopt_long(argc, argv, "hvk:r:M:n:m:e:f:H:o:p:s:V:t:",
+  while((opt = getopt_long(argc, argv, "hvk:r:M:n:m:f:H:c:o:p:s:V:t:",
 			   long_opts, &opt_idx)) != -1){
     switch (opt){
       case 'h': /* help */
@@ -222,9 +225,6 @@ int cmd_args_parse(const int argc, char **argv,
       case 'm': /* iter2 */
 	(*args)->iter2 = atoi(optarg);
 	break;
-      case 'e': /* eliminate */
-	(*args)->eliminate = optarg;
-	break;
 
       /* input */
       case 'f': /* fasta */
@@ -232,6 +232,9 @@ int cmd_args_parse(const int argc, char **argv,
 	break;
       case 'H': /* hic */
 	(*args)->hic_file = optarg;
+	break;
+      case 'c': /* kmer */
+	(*args)->kmer_pair = optarg;
 	break;
 
       /* output */
