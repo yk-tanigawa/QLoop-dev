@@ -120,11 +120,11 @@ int set_kmer_freq_odds(const cmd_args *args,
     const unsigned long bin_min = (long)((margin + res - 1) / res);      
     const unsigned long bin_max = (long)((seq_len - margin - k + 1) / res);
     const unsigned int bit_mask = (1 << (2 * k)) - 1;
-    unsigned long bin;
+    const int kmer_num = res + 2 * margin;
+    unsigned long bin, valid_bin_num = 0;
     unsigned int *kmer_freq_sum = calloc_errchk(bit_mask + 1,
 						sizeof(unsigned int),
 						"calloc kmer_freq_sum");
-
 
     /* count k-mer frequency */
     for(bin = bin_min; bin < bin_max; bin++){
@@ -144,8 +144,8 @@ int set_kmer_freq_odds(const cmd_args *args,
 	unsigned int kmer = 0;
 	/* For bins not containing 'N', allocate memory */
 	(*kmer_freq_odds)[bin] = calloc_errchk(bit_mask + 1,
-					    sizeof(double),
-					    "calloc (*kmer_freq_odds)[]");
+					       sizeof(double),
+					       "calloc (*kmer_freq_odds)[]");
 	/* convert first (k-1)-mer to bit-encoded sequence */
 	for(i = bin * res - margin;
 	    i < bin * res - margin + k - 1; i++){
@@ -160,51 +160,30 @@ int set_kmer_freq_odds(const cmd_args *args,
 	  (*kmer_freq_odds)[bin][(kmer & bit_mask)] += 1.0;
 	  kmer_freq_sum[(kmer & bit_mask)] += 1;
 	}
+	valid_bin_num++;
       }    
     }
-  }
 
-#if 0
-  { /* conver k-mer frequency to k-mer frequency odds */
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "# of valid bins : %d\n", valid_bin_num);
 
-    int valid_bin_num = 0;
-    unsigned int kmer = 0;
-
-    /* count the sum of k-mer frequency */
-    for(bin = (int)((args->margin) / (args->res)) + 1;
-	bin < bin_num - (int)((args->margin) / (args->res)) - 1; bin++){
-      if(kmer_freq[bin] != NULL){
-	valid_bin_num ++;
+    /* conver to k-mer frequency odds */
+    for(bin = bin_min; bin < bin_max; bin++){
+      if((*kmer_freq_odds)[bin] != NULL){
+	unsigned int kmer;
 	for(kmer = 0; kmer < bit_mask + 1; kmer++){
-	  kmer_freq_sum[kmer] += kmer_freq[bin][kmer];
+	  (*kmer_freq_odds)[bin][kmer] *= ((1.0 * valid_bin_num) / 
+					   (kmer_num * kmer_freq_sum[kmer]));
 	}
       }
     }
-
-    for(bin = (int)((args->margin) / (args->res)) + 1;
-	bin < bin_num - (int)((args->margin) / (args->res)) - 1; bin++){
-      if(kmer_freq[bin] != NULL){
-	(*kmer_freq_odds)[bin] = calloc_errchk(bit_mask + 1,
-					       sizeof(double),
-					       "calloc (*kmer_freq_odds)[]");
-	for(kmer = 0; kmer < bit_mask + 1; kmer++){
-	  (*kmer_freq_odds)[bin][kmer] = (1.0 * valid_bin_num * kmer_freq[bin][kmer]) / ((args->res) + 2 * (args->margin) * kmer_freq_sum[kmer]);	  
-	}	
-	
-      }
-      free(kmer_freq[bin]);
-    }
-    free(kmer_freq);
-    fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "# of valid bins : %d\n", valid_bin_num);
   }
-#endif
+
   fprintf(stderr, "%s [INFO] ", args->prog_name);
   fprintf(stderr, "computation of k-mer frequency odds finished\n");
 
   return 0;
 }
-
 
 
 #endif

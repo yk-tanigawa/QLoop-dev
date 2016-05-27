@@ -23,7 +23,6 @@ int main(int argc, char **argv){
     canonical_kp_read((const cmd_args *)args, &ckps);
   }
 
-#if 0
   l2boost *model;
   l2boost_train((const cmd_args *)args,		
 		(const double **)kmer_freq_odds,
@@ -32,7 +31,6 @@ int main(int argc, char **argv){
 		(const unsigned int)args->iter1,
 		&model,
 		stderr);
-#endif
 
   return 0;
 }

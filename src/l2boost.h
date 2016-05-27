@@ -71,33 +71,22 @@ void *cmpXnorm(void *args){
   const unsigned int *revcmp1 = params->ckps->revcmp1;
   const unsigned int *revcmp2 = params->ckps->revcmp2;
 
-  fprintf(stderr, "%s [INFO] ", "---");
-  fprintf(stderr, "Xnorm in\n");
-
-  //  fprintf(stderr, "%ld %ld\n", params->begin, params->end);
-
   /* compute the dot product between U and X^{(j)} */
   unsigned int i, j;
   double sum, pf;
   for(j = params->begin; j < params->end; j++){
     sum = 0;
     for(i = 0; i < params->n; i++){
-      if((feature[h_i[i]] != NULL) && 
-	 (feature[h_j[i]] != NULL)){
-	pf =  ((feature[h_i[i]][kmer1[j]] *
-		feature[h_j[i]][kmer2[j]]) +
-	       (feature[h_i[i]][revcmp1[j]] *
-		feature[h_j[i]][revcmp2[j]]));
-	sum += pf * pf;
-      }else{
-	fprintf(stderr, "%d %d %d\n", i, h_i[i], h_j[i]);
-      }
+      pf =  ((feature[h_i[i]][kmer1[j]] *
+	      feature[h_j[i]][kmer2[j]]) +
+	     (feature[h_i[i]][revcmp1[j]] *
+	      feature[h_j[i]][revcmp2[j]]));
+      sum += pf * pf;     
     }
     (params->Xnorm)[j] = sum;
   }
   return NULL;
 }
-
 
 int pthread_prep(const int thread_num,
 		 const unsigned long n,

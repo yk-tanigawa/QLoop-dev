@@ -6,7 +6,7 @@
 #$ -S /bin/sh
 #$ -cwd
 #$ -V
-#$ -q all.q
+#$ -q 24core.q
 
 CHR="chr21"
 RES="1k"
@@ -22,7 +22,7 @@ DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQG
 FASTA="/data/yt/hg19/chromosomes/${CHR}.fa"
 KMER="/data/yt/QLoop-dev/canonical_kmer_pair"
 
-echo ./twin \
+/work2/yt/QLoop-dev/twin \
     -k ${k} \
     --res 1000 \
     --margin ${MARGIN} \

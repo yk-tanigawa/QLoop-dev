@@ -55,6 +55,11 @@ def bed_set(bedfile, chromosome, res):
             bed_set.add(i)
     return(bed_set)
 
+def fasta_chk_gap(seq, res, margin):
+    has_not_gap = np.array(['N' not in seq[i * res - margin : (i + 1) * res + margin].upper() for i in range(1 + int(len(seq) / res))])
+    has_not_gap[0] = has_not_gap[-1] = False                                               
+    return(has_not_gap)
+
 def hic_prep(logger, 
              infile, outfile, chromosome, 
              res, margin, minsize, maxsize, 
@@ -66,11 +71,7 @@ def hic_prep(logger,
         seqs = {}
         for (head, seq) in fasta_iter(fastafile):
             seqs[head] = seq
-        fasta = [('N' not in seqs[chromosome][max(0, bin * res - margin) : 
-                                              min(1 + int(len(seqs[chromosome]) / res),
-                                                  (bin + 1) * res + margin)].upper()) for 
-                 bin in range(1 + int(len(seqs[chromosome]) / res))]
-        fasta[0] = fasta[-1] = False
+        fasta = fasta_chk_gap(seqs[chromosome], res, margin)
         logger.debug('Fasta file has been loaded')
 
     if(bedfile != None):
