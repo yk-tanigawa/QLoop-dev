@@ -77,6 +77,7 @@ void *cmpXnorm(void *args){
   for(j = params->begin; j < params->end; j++){
     sum = 0;
     for(i = 0; i < params->n; i++){
+      /* pf : pairwise feature */
       pf =  ((feature[h_i[i]][kmer1[j]] *
 	      feature[h_j[i]][kmer2[j]]) +
 	     (feature[h_i[i]][revcmp1[j]] *
@@ -145,14 +146,29 @@ int l2_update_U(double *U,
 		const unsigned long n,
 		const unsigned long s,
 		const double **feature,
+		const hic *data,
+		const canonical_kp *ckps,
 		const double gamma, 
 		const double v){
+  const unsigned int *h_i = data->i;
+  const unsigned int *h_j = data->j;
+  const unsigned int *kmer1 = ckps->kmer1;
+  const unsigned int *kmer2 = ckps->kmer2;
+  const unsigned int *revcmp1 = ckps->revcmp1;
+  const unsigned int *revcmp2 = ckps->revcmp2;
   unsigned long i;
+  double sum = 0, pf = 0;
   residual_square[m] = 0;
   for(i = 0; i < n; i++){
-    U[i] -= v * gamma * feature[i][s];
-    residual_square[m] += 1.0 * U[i] * U[i] / n;
+    /* pf : pairwise feature */
+    pf =  ((feature[h_i[i]][kmer1[s]] *
+	    feature[h_j[i]][kmer2[s]]) +
+	   (feature[h_i[i]][revcmp1[s]] *
+	    feature[h_j[i]][revcmp2[s]]));
+    U[i] -= v * gamma * pf;
+    sum += 1.0 * U[i] * U[i] / n;
   }
+  residual_square[m] = sum;
   return 0;
 }
 
@@ -284,7 +300,8 @@ int l2boost_train(const cmd_args *args,
       /* Update U[] and sum of residual square */
       l2_update_U(U, (*model)->res_sq, 
 		  (const unsigned int)m, n, s, 
-		  feature, (const double)gamma, v);
+		  feature, data, ckps,
+		  (const double)gamma, v);
       
       gettimeofday(&time, NULL);
       l2boost_step_dump(*model,
