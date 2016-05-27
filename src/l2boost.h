@@ -139,17 +139,21 @@ unsigned long l2_select_axis(const double *UdX,
   return argmax;
 }
 
-double l2_update_U(double *U, 
-		   const unsigned long n,
-		   const double gamma, 
-		   const double v){
-  double delta_U = 0;
+int l2_update_U(double *U, 
+		double *residual_square,
+		const unsigned int m,
+		const unsigned long n,
+		const unsigned long s,
+		const double **feature,
+		const double gamma, 
+		const double v){
   unsigned long i;
+  residual_square[m] = 0;
   for(i = 0; i < n; i++){
-    U[i] -= v * gamma;
-    delta_U += (v * gamma) * (v * gamma);
+    U[i] -= v * gamma * feature[i][s];
+    residual_square[m] += 1.0 * U[i] * U[i] / n;
   }
-  return delta_U;
+  return 0;
 }
 
 
@@ -202,8 +206,8 @@ int l2boost_train(const cmd_args *args,
     unsigned long i;
     ((*model)->res_sq)[0] = 0;
     for(i = 0; i < n; i++){
-      U[i] = Y[i] * Y[i];
-      ((*model)->res_sq)[0] += U[i];
+      U[i] = 1.0 * Y[i];
+      ((*model)->res_sq)[0] += 1.0 * U[i] * U[i] / n;
     }
   }
 
@@ -244,6 +248,15 @@ int l2boost_train(const cmd_args *args,
     fprintf(fp, "%s [INFO] ", args->prog_name);
     fprintf(fp, "iter \t axis \t residuals \t step t \t total t\n");
 
+    l2boost_step_dump(*model,
+		      (const unsigned int)m, 
+		      (const unsigned long)s,
+		      (const double)diffSec(time_prev, time),
+		      (const double)diffSec(time_start, time),
+		      (const char *)args->prog_name,
+		      fp);
+    
+
     for(m = 1; m <= iternum; m++){
       /* compute inner product $U \cdot X^{(j)}$ */
       {
@@ -269,12 +282,10 @@ int l2boost_train(const cmd_args *args,
       ((*model)->beta)[s] += v * gamma;
 
       /* Update U[] and sum of residual square */
-      ((*model)->res_sq)[m] = (((*model)->res_sq)[m - 1] - 
-			       l2_update_U(U,
-					   n,
-					   (const double)gamma, 
-					   v));
-
+      l2_update_U(U, (*model)->res_sq, 
+		  (const unsigned int)m, n, s, 
+		  feature, (const double)gamma, v);
+      
       gettimeofday(&time, NULL);
       l2boost_step_dump(*model,
 			(const unsigned int)m, 
