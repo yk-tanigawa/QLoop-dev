@@ -161,7 +161,7 @@ int l2boost_step_dump(const l2boost *model,
 		      const char *prog_name,
 		      FILE *fp){
   fprintf(fp, "%s [INFO] ", prog_name);
-  fprintf(fp, "%d\t%ld\t%f\t%f\t%f\n",
+  fprintf(fp, "%d\t%ld\t%e\t%f\t%f\n",
 	  m, s, (model->res_sq)[m], sec_per_step, sec_total);
   return 0;
 }
@@ -200,6 +200,7 @@ int l2boost_train(const cmd_args *args,
   {
     const double *Y = data->mij;
     unsigned long i;
+    ((*model)->res_sq)[0] = 0;
     for(i = 0; i < n; i++){
       U[i] = Y[i] * Y[i];
       ((*model)->res_sq)[0] += U[i];
