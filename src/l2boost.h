@@ -124,14 +124,56 @@ int pthread_prep(const int thread_num,
   return 0;
 }
 
+unsigned long l2_select_axis(const double *UdX, 
+			     const double *Xnorm,
+			     const unsigned long p){
+  unsigned long argmax = 0;
+  double max = UdX[argmax] / Xnorm[argmax];
+  unsigned long j;
+  for(j = 1; j < p; j++){
+    if(max < UdX[j] / Xnorm[j]){
+      argmax = j;
+      max = UdX[argmax] / Xnorm[argmax];
+    }
+  }
+  return argmax;
+}
+
+double l2_update_U(double *U, 
+		   const unsigned long n,
+		   const double gamma, 
+		   const double v){
+  double delta_U = 0;
+  unsigned long i;
+  for(i = 0; i < n; i++){
+    U[i] -= v * gamma;
+    delta_U += (v * gamma) * (v * gamma);
+  }
+  return delta_U;
+}
+
+
+int l2boost_step_dump(const l2boost *model,
+		      const unsigned int m,
+		      const unsigned long s,
+		      const double sec_per_step,
+		      const double sec_total,
+		      const char *prog_name,
+		      FILE *fp){
+  fprintf(fp, "%s [INFO] ", prog_name);
+  fprintf(fp, "%d\t%ld\t%f\t%f\t%f\n",
+	  m, s, (model->res_sq)[m], sec_per_step, sec_total);
+  return 0;
+}
+
 int l2boost_train(const cmd_args *args,
 		  const double **feature,
 		  const hic *data,
 		  const canonical_kp *ckps,
 		  const unsigned int iternum,
+		  const double v,
 		  l2boost **model,
-		  FILE *fp){
-  
+		  FILE *fp){  
   const unsigned long n = data->nrow;
   const unsigned long p = ckps->num;
   const int thread_num = args->thread_num;
@@ -139,11 +181,12 @@ int l2boost_train(const cmd_args *args,
   double gamma = 0;
   double *U, *UdX, *Xnorm;
   unsigned int m = 0;
+  struct timeval time_start, time_prev, time;
 
   /* allocate memory */
   {
     *model = calloc_errchk(1, sizeof(l2boost), "calloc l2boost");
-    (*model)->res_sq = calloc_errchk(iternum, sizeof(double),
+    (*model)->res_sq = calloc_errchk(iternum + 1, sizeof(double),
 				     "calloc l2boost -> res_sq");
     (*model)->beta   = calloc_errchk(p, sizeof(double),
 				     "calloc l2boost -> beta");
@@ -152,16 +195,21 @@ int l2boost_train(const cmd_args *args,
     Xnorm = calloc_errchk(p, sizeof(double), "calloc Xnorm[]");
   }
 
+  /* initialize residuals U[] := Y[] and 
+   * compute \sum_i U[i]^2                */
+  {
+    const double *Y = data->mij;
+    unsigned long i;
+    for(i = 0; i < n; i++){
+      U[i] = Y[i] * Y[i];
+      ((*model)->res_sq)[0] += U[i];
+    }
+  }
+
   if(thread_num >= 1){
     int t = 0;
     cmpUdX_args *params;
     pthread_t *threads;
-
-    /* prepare for thread programming */
-    pthread_prep(thread_num, n, p, 
-		 feature, data, ckps,
-		 U, UdX, Xnorm,
-		 &params, &threads);
 
     fprintf(stderr, "%s [INFO] ", args->prog_name);
     fprintf(stderr, "start computation of Xnorm with %d threads\n",
@@ -169,6 +217,14 @@ int l2boost_train(const cmd_args *args,
 
     /* compute Xnorm ||X^{(j)}|| */
     {
+      gettimeofday(&time_prev, NULL);
+
+      /* prepare for thread programming */
+      pthread_prep(thread_num, n, p, 
+		   feature, data, ckps,
+		   U, UdX, Xnorm, 
+		   &params, &threads);
+		   
       for(t = 0; t < thread_num; t++){
 	pthread_create(&threads[t], NULL, 
 		       cmpXnorm, (void*)&params[t]);		       
@@ -176,129 +232,62 @@ int l2boost_train(const cmd_args *args,
       for(t = 0; t < thread_num; t++){
 	pthread_join(threads[t], NULL);
       }
+      gettimeofday(&time, NULL);
     }
 
     fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "Xnorm finished\n");
+    fprintf(stderr, "Xnorm finished in %f sec.\n", diffSec(time_prev, time));
+    cpTimeval(time, &time_prev);
+    cpTimeval(time, &time_start);
 
+    fprintf(fp, "%s [INFO] ", args->prog_name);
+    fprintf(fp, "iter \t axis \t residuals \t step t \t total t\n");
 
-  }
-#if 0
-    gettimeofday(&t0, NULL);
-
-    /* AdaBoost iterations */
-    for(t = 0; t < cmd_args->iteration_num; t++){
-      /* step 1 : compute normalized weights p[] */
+    for(m = 1; m <= iternum; m++){
+      /* compute inner product $U \cdot X^{(j)}$ */
       {
-	wsum = 0;
-	for(n = 0; n < (hic->nrow); n++){
-	  wsum += w[n];
-	}
-	for(n = 0; n < (hic->nrow); n++){
-	  p[n] = 1.0 * w[n] / wsum;
+	/* prepare for thread programming */
+	pthread_prep(thread_num, n, p, 
+		     feature, data, ckps,
+		     U, UdX, Xnorm, 
+		     &params, &threads);
+		   
+	for(t = 0; t < thread_num; t++){
+	  pthread_create(&threads[t], NULL, 
+			 cmpUdX, (void*)&params[t]);		       
+	} 
+	for(t = 0; t < thread_num; t++){
+	  pthread_join(threads[t], NULL);
 	}
       }
 
-      /* step 2 : find the most appropriate axis (weak lerner) */
-      {
-	/* compute err for each kmer pair using pthread */
-	{
-	  /* pthread create */
-	  for(i = 0; i < cmd_args->exec_thread_num; i++){
-	    pthread_create(&threads[i], NULL, adaboost_comp_err, (void*)&params[i]);	
-	  }      
-	  /* pthread join */
-	  for(i = 0; i < cmd_args->exec_thread_num; i++){
-	    pthread_join(threads[i], NULL);
-	  }
-	}
+      /* select axis */
+      s = l2_select_axis((const double *)UdX, (const double *)Xnorm, p);			 
+      gamma = UdX[s] / Xnorm[s];
+      
+      ((*model)->beta)[s] += v * gamma;
 
-	/* find best stamp */
-	{
-	  lm = 0;
-	  /* skip arleady selected kmer pairs */
-	  while(marked[lm] != 0){
-	    lm++;
-	  }
-	  /* find max and min*/
-	  max = min = err[lm];
-	  argmax_lm = argmin_lm = lm;
-	  for(lm++; lm < canonical_kmer_pair_num; lm++){
-	    if(marked[lm] == 0){
-	      if(err[lm] < min){
-		min = err[lm];
-		argmin_lm = lm;
-	      }else if(err[lm] > max){
-		max = err[lm];
-		argmax_lm = lm;
-	      }
-	    }
-	  }
-	  /* compare max and min */
-	  {
-	    if(max + min > 1.0){
-	      /** 
-	       * min > 1 - max 
-	       *  argmaxd is the best axis
-	       */
-	      marked[argmax_lm]++;
-	      ((*model)->axis)[t] = argmax_lm;
-	      ((*model)->sign)[t] = 1;
-	      epsilon = 1 - max;
-	    }else{
-	      /*  argmind is the best axis */
-	      marked[argmin_lm]++;
-	      ((*model)->axis)[t] = argmin_lm;
-	      ((*model)->sign)[t] = 0;
-	      epsilon = min;       
-	    }      	    
-	  }
-	}
-      }
-      /* step 3 : compute new weights */
-      {
-	((*model)->beta)[t] = epsilon / (1 - epsilon);
-	for(n = 0; n < hic->nrow; n++){
-	  pred = 
-	    ((kmer_freq[hic->i[n]][kp->l1[((*model)->axis)[t]]] * 
-	      kmer_freq[hic->j[n]][kp->m1[((*model)->axis)[t]]] +
-	      kmer_freq[hic->i[n]][kp->l2[((*model)->axis)[t]]] * 
-	      kmer_freq[hic->j[n]][kp->m2[((*model)->axis)[t]]]) > 0) ? 1 : 0;
-	  if(((((*model)->sign)[t] == 0) && pred == y[n]) ||
-	     ((((*model)->sign)[t] == 1) && pred != y[n])){
-	    w[n] *= ((*model)->beta)[t];
-	  }
-	}
-      }
+      /* Update U[] and sum of residual square */
+      ((*model)->res_sq)[m] = (((*model)->res_sq)[m - 1] - 
+			       l2_update_U(U,
+					   n,
+					   (const double)gamma, 
+					   v));
+
       gettimeofday(&time, NULL);
-      adaboost_show_itr(stderr, 
-			*model, (const char**)kmer_strings, kp, 
-			t, diffSec(t0, time));
+      l2boost_step_dump(*model,
+			(const unsigned int)m, 
+			(const unsigned long)s,
+			(const double)diffSec(time_prev, time),
+			(const double)diffSec(time_start, time),
+			(const char *)args->prog_name,
+			fp);
+      cpTimeval(time, &time_prev);
     }
+
   }
-  
-  /* write to file OR stderr */
-  {
-    if(output_file == NULL){
-      adaboost_show_all(stderr, *model, (const char**)kmer_strings, kp);
-    }else{
-      FILE *fp;
-      if((fp = fopen(output_file, "w")) == NULL){
-	fprintf(stderr, "error: fopen %s\n%s\n",
-		output_file, strerror(errno));
-	exit(EXIT_FAILURE);
-      }
-      fprintf(stderr, "%s: info: AdaBoost: writing results to file: %s\n",
-	      cmd_args->prog_name, output_file);
-      adaboost_show_all(fp, *model, (const char**)kmer_strings, kp);
-      fclose(fp);
-    }
-  }
-#endif
   return 0;
 }
-
-
 
 
 #if 0

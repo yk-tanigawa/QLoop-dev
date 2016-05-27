@@ -165,7 +165,7 @@ int set_kmer_freq_odds(const cmd_args *args,
     }
 
     fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "# of valid bins : %d\n", valid_bin_num);
+    fprintf(stderr, "# of valid bins : %ld\n", valid_bin_num);
 
     /* conver to k-mer frequency odds */
     for(bin = bin_min; bin < bin_max; bin++){

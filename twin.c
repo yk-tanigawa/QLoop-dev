@@ -29,6 +29,7 @@ int main(int argc, char **argv){
 		(const hic *)data,
 		(const canonical_kp *)ckps,
 		(const unsigned int)args->iter1,
+		0.1,
 		&model,
 		stderr);
 
