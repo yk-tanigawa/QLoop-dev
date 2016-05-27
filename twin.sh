@@ -7,6 +7,7 @@
 #$ -cwd
 #$ -V
 #$ -q 24core.q
+#$ -pe smp 24
 
 CHR="chr21"
 RES="1k"
