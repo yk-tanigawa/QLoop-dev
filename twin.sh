@@ -19,11 +19,25 @@ EXP=${NORM}
 k=5
 ELIMINATE="GATC"
 
+version="v0.50"
+PROG_DIR="/work2/yt/QLoop-dev"
 DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQGE30"
 FASTA="/data/yt/hg19/chromosomes/${CHR}.fa"
 KMER="/data/yt/QLoop-dev/canonical_kmer_pair"
 
-/work2/yt/QLoop-dev/twin \
+
+cd ${PROG_DIR}
+
+git checkout ${version}
+
+git log --oneline --graph --decorate -n3
+
+make clean
+make twin
+
+${PROG_DIR}/twin -v
+
+${PROG_DIR}/twin \
     -k ${k} \
     --res 1000 \
     --margin ${MARGIN} \
@@ -33,3 +47,5 @@ KMER="/data/yt/QLoop-dev/canonical_kmer_pair"
     --hic ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm \
     --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
     --out ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm.k${k}
+
+git checkout master
