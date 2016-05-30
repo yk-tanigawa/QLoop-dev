@@ -31,7 +31,7 @@ int main(int argc, char **argv){
 		(const unsigned int)args->iter1,
 		0.5,
 		&model,
-		stdout);
+		stderr);
 
   return 0;
 }

@@ -206,7 +206,7 @@ int cmd_args_parse(const int argc, char **argv,
 	show_usage(stdout, argv[0]);
 	exit(EXIT_SUCCESS);
       case 'v': /* version*/
-	fprintf(stdout, "version: 0.50\n");
+	fprintf(stdout, "version: 0.51\n");
 	exit(EXIT_SUCCESS);
 
       /* parameters */

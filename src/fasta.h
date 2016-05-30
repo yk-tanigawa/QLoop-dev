@@ -120,7 +120,6 @@ int set_kmer_freq_odds(const cmd_args *args,
     const unsigned long bin_min = (long)((margin + res - 1) / res);      
     const unsigned long bin_max = (long)((seq_len - margin - k + 1) / res);
     const unsigned int bit_mask = (1 << (2 * k)) - 1;
-    const int kmer_num = res + 2 * margin;
     unsigned long bin, valid_bin_num = 0;
     unsigned int *kmer_freq_sum = calloc_errchk(bit_mask + 1,
 						sizeof(unsigned int),
@@ -133,8 +132,6 @@ int set_kmer_freq_odds(const cmd_args *args,
 	  i < (bin + 1) * res + k - 1 + margin; i++){
 	if(seq[i] == 'N' || seq[i] == 'n'){	
 	  contain_n = 1;
-	  //	  fprintf(stderr, "%s [DEBUG] ", args->prog_name);
-	  //fprintf(stderr, "%d is invalid bin(letter %d is N)\n", bin, i);
 	  break;
 	}
       }
@@ -171,9 +168,13 @@ int set_kmer_freq_odds(const cmd_args *args,
     for(bin = bin_min; bin < bin_max; bin++){
       if((*kmer_freq_odds)[bin] != NULL){
 	unsigned int kmer;
+	double sum = 0;
 	for(kmer = 0; kmer < bit_mask + 1; kmer++){
-	  (*kmer_freq_odds)[bin][kmer] *= ((1.0 * valid_bin_num) / 
-					   (kmer_num * kmer_freq_sum[kmer]));
+	  (*kmer_freq_odds)[bin][kmer] /= (kmer_freq_sum[kmer]);
+	  sum += (*kmer_freq_odds)[bin][kmer] * (*kmer_freq_odds)[bin][kmer];
+	}
+	for(kmer = 0; kmer < bit_mask + 1; kmer++){
+	  (*kmer_freq_odds)[bin][kmer] /= sum;
 	}
       }
     }

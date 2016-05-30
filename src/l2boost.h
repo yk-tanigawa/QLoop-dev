@@ -193,7 +193,7 @@ int l2boost_step_dump(const l2boost *model,
 		      const double sec_total,
 		      const char *prog_name,
 		      FILE *fp){
-  fprintf(fp, "%s [INFO] ", prog_name);
+  fprintf(fp, "%s [INFO] \t ", prog_name);
   fprintf(fp, "%d\t%ld\t%e\t%e\t%f\t%f\n",
 	  m, s, gamma, (model->res_sq)[m], sec_per_step, sec_total);
   return 0;
@@ -274,8 +274,8 @@ int l2boost_train(const cmd_args *args,
     cpTimeval(time, &time_prev);
     cpTimeval(time, &time_start);
 
-    fprintf(fp, "%s [INFO] ", args->prog_name);
-    fprintf(fp, "iter \t axis \t residuals \t step t \t total t\n");
+    fprintf(fp, "%s [INFO] \t ", args->prog_name);
+    fprintf(fp, "iter \t axis \t gamma \t residuals \t step t \t total t\n");
 
     l2boost_step_dump(*model,
 		      (const unsigned int)m, 
