@@ -18,11 +18,11 @@ MARGIN=500
 EXP=${NORM}
 k=5
 ELIMINATE="GATC"
-iter1=1000
+iter1=100
 iter2=100
 acc=1.0
 
-version="v0.52"
+version="v0.53"
 PROG_DIR="/work2/yt/QLoop-dev"
 DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQGE30"
 FASTA="/data/yt/hg19/chromosomes/${CHR}.fa"
@@ -40,7 +40,7 @@ make twin
 
 ${PROG_DIR}/twin -v
 
-echo ${PROG_DIR}/twin \
+${PROG_DIR}/twin \
     -k ${k} \
     --res 1000 \
     --margin ${MARGIN} \

@@ -30,7 +30,7 @@ typedef struct _cmpUdX_args{
   /* shared data */
   double *U;
   double *UdX;
-  double *Xnorm;
+  double *Xnormsq;
 } cmpUdX_args;
 
 void *cmpUdX(void *args){
@@ -60,7 +60,7 @@ void *cmpUdX(void *args){
   return NULL;
 }
 
-void *cmpXnorm(void *args){
+void *cmpXnormsq(void *args){
   /* unstack parameters */
   const cmpUdX_args *params = (cmpUdX_args *)args;
   const double **feature = params->feature;
@@ -71,7 +71,7 @@ void *cmpXnorm(void *args){
   const unsigned int *revcmp1 = params->ckps->revcmp1;
   const unsigned int *revcmp2 = params->ckps->revcmp2;
 
-  /* compute the dot product between U and X^{(j)} */
+  /* compute ||X^{(j)}||^2 */
   unsigned int i, j;
   double sum, pf;
   for(j = params->begin; j < params->end; j++){
@@ -84,7 +84,7 @@ void *cmpXnorm(void *args){
 	      feature[h_j[i]][revcmp2[j]]));
       sum += pf * pf;     
     }
-    (params->Xnorm)[j] = sum;
+    (params->Xnormsq)[j] = sum;
   }
   return NULL;
 }
@@ -109,7 +109,7 @@ int pthread_prep(const int thread_num,
 		 const canonical_kp *ckps,
 		 double *U,
 		 double *UdX,
-		 double *Xnorm,
+		 double *Xnormsq,
 		 cmpUdX_args **params,
 		 pthread_t **threads){
   int i = 0;
@@ -128,25 +128,25 @@ int pthread_prep(const int thread_num,
       ((i == (thread_num - 1)) ? p : (p / thread_num) * (i + 1));
     (*params)[i].n = n;
     (*params)[i].feature = feature;
-    (*params)[i].data = data;
-    (*params)[i].ckps = ckps;
-    (*params)[i].U     = U;
-    (*params)[i].UdX   = UdX;
-    (*params)[i].Xnorm = Xnorm;
+    (*params)[i].data    = data;
+    (*params)[i].ckps    = ckps;
+    (*params)[i].U       = U;
+    (*params)[i].UdX     = UdX;
+    (*params)[i].Xnormsq = Xnormsq;
   }
   return 0;
 }
 
 unsigned long l2_select_axis(const double *UdX, 
-			     const double *Xnorm,
+			     const double *Xnormsq,
 			     const unsigned long p){
   unsigned long argmax = 0;
-  double max = UdX[argmax] / Xnorm[argmax];
+  double max = UdX[argmax] * UdX[argmax] / Xnormsq[argmax];
   unsigned long j;
   for(j = 1; j < p; j++){
-    if(max < UdX[j] / Xnorm[j]){
+    if(max < UdX[j] / Xnormsq[j]){
       argmax = j;
-      max = UdX[argmax] / Xnorm[argmax];
+      max = UdX[argmax] * UdX[argmax] / Xnormsq[argmax];
     }
   }
   return argmax;
@@ -170,7 +170,6 @@ int l2_update_U(double *U,
   const unsigned int *revcmp2 = ckps->revcmp2;
   unsigned long i;
   double sum = 0, pf = 0;
-  residual_square[m] = 0;
   for(i = 0; i < n; i++){
     /* pf : pairwise feature */
     pf =  ((feature[h_i[i]][kmer1[s]] *
@@ -212,7 +211,7 @@ int l2boost_train(const cmd_args *args,
   const int thread_num = args->thread_num;
   unsigned long s = 0;
   double gamma = 0;
-  double *U, *UdX, *Xnorm;
+  double *U, *UdX, *Xnormsq;
   unsigned int m = 0;
   struct timeval time_start, time_prev, time;
 
@@ -223,9 +222,9 @@ int l2boost_train(const cmd_args *args,
 				     "calloc l2boost -> res_sq");
     (*model)->beta   = calloc_errchk(p, sizeof(double),
 				     "calloc l2boost -> beta");
-    U     = calloc_errchk(n, sizeof(double), "calloc U[]");
-    UdX   = calloc_errchk(p, sizeof(double), "calloc UdX[]");
-    Xnorm = calloc_errchk(p, sizeof(double), "calloc Xnorm[]");
+    U       = calloc_errchk(n, sizeof(double), "calloc U[]");
+    UdX     = calloc_errchk(p, sizeof(double), "calloc UdX[]");
+    Xnormsq = calloc_errchk(p, sizeof(double), "calloc Xnormsq[]");
   }
 
   /* initialize residuals U[] := Y[] and 
@@ -235,8 +234,8 @@ int l2boost_train(const cmd_args *args,
     unsigned long i;
     ((*model)->res_sq)[0] = 0;
     for(i = 0; i < n; i++){
-      U[i] = 1.0 * Y[i];
-      ((*model)->res_sq)[0] += 1.0 * U[i] * U[i] / n;
+      U[i] = Y[i];
+      ((*model)->res_sq)[0] += U[i] * U[i] / n;
     }
   }
 
@@ -246,22 +245,22 @@ int l2boost_train(const cmd_args *args,
     pthread_t *threads;
 
     fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "start computation of Xnorm with %d threads\n",
+    fprintf(stderr, "start computation of Xnormsq with %d threads\n",
 	    thread_num);
 
-    /* compute Xnorm ||X^{(j)}|| */
+    /* compute Xnormsq ||X^{(j)}||^2 */
     {
       gettimeofday(&time_prev, NULL);
 
       /* prepare for thread programming */
       pthread_prep(thread_num, n, p, 
 		   feature, data, ckps,
-		   U, UdX, Xnorm, 
+		   U, UdX, Xnormsq, 
 		   &params, &threads);
 		   
       for(t = 0; t < thread_num; t++){
 	pthread_create(&threads[t], NULL, 
-		       cmpXnorm, (void*)&params[t]);		       
+		       cmpXnormsq, (void*)&params[t]);		       
       } 
       for(t = 0; t < thread_num; t++){
 	pthread_join(threads[t], NULL);
@@ -270,7 +269,7 @@ int l2boost_train(const cmd_args *args,
     }
 
     fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "Xnorm finished in %f sec.\n", diffSec(time_prev, time));
+    fprintf(stderr, "Xnormsq finished in %f sec.\n", diffSec(time_prev, time));
     cpTimeval(time, &time_prev);
     cpTimeval(time, &time_start);
 
@@ -293,7 +292,7 @@ int l2boost_train(const cmd_args *args,
 	/* prepare for thread programming */
 	pthread_prep(thread_num, n, p, 
 		     feature, data, ckps,
-		     U, UdX, Xnorm, 
+		     U, UdX, Xnormsq, 
 		     &params, &threads);
 		   
 	for(t = 0; t < thread_num; t++){
@@ -306,8 +305,8 @@ int l2boost_train(const cmd_args *args,
       }
 
       /* select axis */
-      s = l2_select_axis((const double *)UdX, (const double *)Xnorm, p);			 
-      gamma = UdX[s] / Xnorm[s];
+      s = l2_select_axis((const double *)UdX, (const double *)Xnormsq, p);			 
+      gamma = UdX[s] / Xnormsq[s];
       
       ((*model)->beta)[s] += v * gamma;
 
