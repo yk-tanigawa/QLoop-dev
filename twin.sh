@@ -22,7 +22,7 @@ iter1=100
 iter2=100
 acc=1.0
 
-version="v0.53"
+version="v0.54"
 PROG_DIR="/work2/yt/QLoop-dev"
 DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQGE30"
 FASTA="/data/yt/hg19/chromosomes/${CHR}.fa"

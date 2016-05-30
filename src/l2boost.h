@@ -144,7 +144,7 @@ unsigned long l2_select_axis(const double *UdX,
   double max = UdX[argmax] * UdX[argmax] / Xnormsq[argmax];
   unsigned long j;
   for(j = 1; j < p; j++){
-    if(max < UdX[j] / Xnormsq[j]){
+    if(max < UdX[j] * UdX[j] / Xnormsq[j]){
       argmax = j;
       max = UdX[argmax] * UdX[argmax] / Xnormsq[argmax];
     }
