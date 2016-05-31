@@ -352,7 +352,7 @@ int l2boost_train(const cmd_args *args,
     double pf;
     /* pf : pairwise feature */
     for(j = 0; j < p; j++){
-      if(((*model)->beta[j]) > 0){
+      if(((*model)->beta[j]) != 0){
 	for(i = 0; i < n; i++){
 	  pf =  ((feature[h_i[i]][kmer1[j]] *
 		  feature[h_j[i]][kmer2[j]]) +
