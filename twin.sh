@@ -18,16 +18,16 @@ MARGIN=500
 EXP=${NORM}
 k=5
 ELIMINATE="GATC"
-iter1=100
+iter1=500
 iter2=100
 acc=1.0
 
-version="v0.54"
+version="v0.55"
 PROG_DIR="/work2/yt/QLoop-dev"
 DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQGE30"
 FASTA="/data/yt/hg19/chromosomes/${CHR}.fa"
 KMER="/data/yt/QLoop-dev/canonical_kmer_pair"
-
+PRI="/data/yt/QLoop-dev/v0.54/v054N400.e413446.res"
 
 cd ${PROG_DIR}
 
@@ -35,10 +35,10 @@ cd ${PROG_DIR}
 
 #git log --oneline --graph --decorate -n3
 
-make clean
-make twin
+#make clean
+#make twin
 
-${PROG_DIR}/twin -v
+#${PROG_DIR}/twin -v
 
 ${PROG_DIR}/twin \
     -k ${k} \
@@ -50,6 +50,7 @@ ${PROG_DIR}/twin \
     --fasta ${FASTA} \
     --hic ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm \
     --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
-    --out ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm.k${k}
+    --pri ${PRI} \
+    --out ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm.k${k}     
 
 #git checkout master

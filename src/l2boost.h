@@ -222,7 +222,8 @@ int l2boost_load(const cmd_args *args,
 		 const canonical_kp *ckps,
 		 const unsigned int iternum,
 		 const char *file,
-		 l2boost **model){  
+		 l2boost **model,
+		 FILE *fp_out){  
   const unsigned long p = ckps->num;
 
   /* allocate memory */
@@ -246,7 +247,7 @@ int l2boost_load(const cmd_args *args,
     unsigned long axis;
     unsigned int m, model_len;
 
-    model_len = mywc(file);
+    model_len = mywc(file) - 2;
 
     if(model_len >= iternum){
       fprintf(stderr, "%s [ERROR] ", args->prog_name);
@@ -263,12 +264,15 @@ int l2boost_load(const cmd_args *args,
 	      file, strerror(errno));
       exit(EXIT_FAILURE);
     }
+
+    fprintf(fp, "%s [INFO] \t ", args->prog_name);
+    fprintf(fp, "iter \t axis \t gamma \t residuals \t step t \t total t\n");
     
     /* skip a header line */
     fgets(buf, BUF_SIZE, fp);
 
-    m = 1;
-    while(fgets(buf, BUF_SIZE, fp) && m < model_len){
+    m = 0;
+    while(fgets(buf, BUF_SIZE, fp) && m <= model_len){
       /* parse the input line */
       sscanf(buf, "%d\t%ld\t%s\t%s\t%s\t%s", 
 	     &iter, &axis, gamma_str, residuals_str,
@@ -280,15 +284,21 @@ int l2boost_load(const cmd_args *args,
 	exit(EXIT_FAILURE);
       }
       
-      (*model)->beta[axis] += strtod(gamma_str, NULL);      
+      (*model)->beta[axis] += strtod(gamma_str, NULL);
       (*model)->res_sq[m] = strtod(residuals_str, NULL);      
+
+      l2boost_step_dump(*model, m, axis, 
+			strtod(gamma_str, NULL), 0, 0,
+			(const char *)args->prog_name,
+			fp_out);
+
       (*model)->nextiter = ++m;      
     }
   
     fclose(fp);
 
     fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "%d iterations has loaded from file\n", m);
+    fprintf(stderr, "%d iterations has loaded from file\n", m - 1);
   }
 
   return 0;

@@ -24,17 +24,27 @@ int main(int argc, char **argv){
   }
 
   l2boost *model;
-  l2boost_init((const canonical_kp *)ckps,	       
-	       (const unsigned int)args->iter1,
-	       &model);
+  {
+    if(args->pri_file != NULL){
+      l2boost_load((const cmd_args *)args,
+		   (const canonical_kp *)ckps,	       
+		   (const unsigned int)args->iter1,
+		   (const char *)args->pri_file,
+		   &model,
+		   stderr);      
+    }else{
+      l2boost_init((const canonical_kp *)ckps,	       
+		   (const unsigned int)args->iter1,
+		   &model);
+    }
 
-  l2boost_train((const cmd_args *)args,		
-		(const double **)kmer_freq_odds,
-		(const hic *)data,
-		(const canonical_kp *)ckps,
-		(const double)args->acc,
-		&model,
-		stderr);
-
+    l2boost_train((const cmd_args *)args,		
+		  (const double **)kmer_freq_odds,
+		  (const hic *)data,
+		  (const canonical_kp *)ckps,
+		  (const double)args->acc,
+		  &model,
+		  stderr);
+  }
   return 0;
 }
