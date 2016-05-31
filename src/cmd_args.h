@@ -33,6 +33,7 @@ typedef struct _cmd_args {
 
 int show_usage(FILE *, const char *);
 int cmd_args_chk(const cmd_args *);
+int cmd_args_chk_pred(const cmd_args *);
 int cmd_args_parse(const int, char **, cmd_args **);
 		   
 

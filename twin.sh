@@ -30,9 +30,9 @@ KMER="/data/yt/QLoop-dev/canonical_kmer_pair"
 
 cd ${PROG_DIR}
 
-git checkout ${version}
+#git checkout ${version}
 
-git log --oneline --graph --decorate -n3
+#git log --oneline --graph --decorate -n3
 
 make clean
 make twin
@@ -50,4 +50,4 @@ ${PROG_DIR}/twin \
     --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
     --out ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm.k${k}
 
-git checkout master
+#git checkout master

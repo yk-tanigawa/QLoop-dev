@@ -14,6 +14,8 @@
 typedef struct _l2boost{
   double *res_sq;
   double *beta;
+  unsigned int nextiter;
+  unsigned int iternum;
 } l2boost;
 
 typedef struct _cmpUdX_args{
@@ -199,11 +201,29 @@ int l2boost_step_dump(const l2boost *model,
   return 0;
 }
 
+int l2boost_init(const canonical_kp *ckps,		 
+		 const unsigned int iternum,
+		 l2boost **model){  
+  const unsigned long p = ckps->num;
+
+  /* allocate memory */
+  {
+    *model = calloc_errchk(1, sizeof(l2boost), "calloc l2boost");
+    (*model)->res_sq = calloc_errchk(iternum + 1, sizeof(double),
+				     "calloc l2boost -> res_sq");
+    (*model)->beta   = calloc_errchk(p, sizeof(double),
+				     "calloc l2boost -> beta");
+    (*model)->iternum = iternum;
+    (*model)->nextiter = 1;
+  }
+
+  return 0;
+}
+
 int l2boost_train(const cmd_args *args,
 		  const double **feature,
 		  const hic *data,
 		  const canonical_kp *ckps,
-		  const unsigned int iternum,
 		  const double v,
 		  l2boost **model,
 		  FILE *fp){  
@@ -218,11 +238,6 @@ int l2boost_train(const cmd_args *args,
 
   /* allocate memory */
   {
-    *model = calloc_errchk(1, sizeof(l2boost), "calloc l2boost");
-    (*model)->res_sq = calloc_errchk(iternum + 1, sizeof(double),
-				     "calloc l2boost -> res_sq");
-    (*model)->beta   = calloc_errchk(p, sizeof(double),
-				     "calloc l2boost -> beta");
     U     = calloc_errchk(n, sizeof(double), "calloc U[]");
     UdX   = calloc_errchk(p, sizeof(double), "calloc UdX[]");
     Xnorm = calloc_errchk(p, sizeof(double), "calloc Xnorm[]");
@@ -287,7 +302,7 @@ int l2boost_train(const cmd_args *args,
 		      fp);
     
 
-    for(m = 1; m <= iternum; m++){
+    for(m = (*model)->nextiter; m <= (*model)->iternum; m++){
       /* compute inner product $U \cdot X^{(j)}$ */
       {
 	/* prepare for thread programming */
