@@ -32,7 +32,7 @@ int main(int argc, char **argv){
 		(const double **)kmer_freq_odds,
 		(const hic *)data,
 		(const canonical_kp *)ckps,
-		0.5,
+		(const double)args->acc,
 		&model,
 		stderr);
 

@@ -15,6 +15,7 @@ typedef struct _cmd_args {
   int margin;
   int iter1;
   int iter2;
+  double acc;
   /* input */
   char *fasta_file;
   char *hic_file;
@@ -42,7 +43,7 @@ int show_usage(FILE *fp,
   fprintf(fp, "%s [INFO] ", prog_name);
   fprintf(fp, "usage:\n");
   fprintf(fp, 
-	  "%s -k k --res r [--margin M] --iter1 n --iter2 m --fasta f --hic H --kmer c --out o [--pri p] [--sec s] [--verbose V] --thread_num t \n",
+	  "%s -k k --res r [--margin M] --iter1 n --iter2 m --acc a --fasta f --hic H --kmer c --out o [--pri p] [--sec s] [--verbose V] --thread_num t \n",
 	  prog_name);
   return 0;
 }
@@ -95,6 +96,15 @@ int cmd_args_chk(const cmd_args *args){
   }else if(errflag == 0){
     fprintf(stderr, "%s [INFO] ", args->prog_name);
     fprintf(stderr, "%s : %d\n", "iter2", args->iter2);
+  }
+
+  if(args->acc <= 0){	       
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "acc is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %f\n", "acc", args->acc);
   }
 
   /* input */
@@ -182,6 +192,7 @@ int cmd_args_parse(const int argc, char **argv,
     {"margin",    required_argument, NULL, 'M'},
     {"iter1",     required_argument, NULL, 'n'},
     {"iter2",     required_argument, NULL, 'm'},
+    {"acc",       required_argument, NULL, 'a'},
     /* input */
     {"fasta",     required_argument, NULL, 'f'},
     {"hic",       required_argument, NULL, 'H'},
@@ -200,14 +211,14 @@ int cmd_args_parse(const int argc, char **argv,
   *args = calloc_errchk(1, sizeof(cmd_args), 
 			"calloc: command line args");
 
-  while((opt = getopt_long(argc, argv, "hvk:r:M:n:m:f:H:c:o:p:s:V:t:",
+  while((opt = getopt_long(argc, argv, "hvk:r:M:n:m:a:f:H:c:o:p:s:V:t:",
 			   long_opts, &opt_idx)) != -1){
     switch (opt){
       case 'h': /* help */
 	show_usage(stdout, argv[0]);
 	exit(EXIT_SUCCESS);
       case 'v': /* version*/
-	fprintf(stdout, "version: 0.51\n");
+	fprintf(stdout, "version: 0.53\n");
 	exit(EXIT_SUCCESS);
 
       /* parameters */
@@ -225,6 +236,9 @@ int cmd_args_parse(const int argc, char **argv,
 	break;
       case 'm': /* iter2 */
 	(*args)->iter2 = atoi(optarg);
+	break;
+      case 'a': /* acceleration */
+	(*args)->acc = atof(optarg);
 	break;
 
       /* input */
