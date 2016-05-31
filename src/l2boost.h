@@ -184,7 +184,6 @@ int l2_update_U(double *U,
   return 0;
 }
 
-
 int l2boost_step_dump(const l2boost *model,
 		      const unsigned int m,
 		      const unsigned long s,
@@ -303,8 +302,7 @@ int l2boost_load(const cmd_args *args,
 
   return 0;
 }
-
-
+			  
 int l2boost_train(const cmd_args *args,
 		  const double **feature,
 		  const hic *data,
@@ -340,6 +338,32 @@ int l2boost_train(const cmd_args *args,
     }
   }
 
+  /* If we load some model from a filr, update residuals */
+  if(((*model)->nextiter) > 1){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "start computation of residuals\n");
+    const unsigned int *h_i = data->i;
+    const unsigned int *h_j = data->j;
+    const unsigned int *kmer1 = ckps->kmer1;
+    const unsigned int *kmer2 = ckps->kmer2;
+    const unsigned int *revcmp1 = ckps->revcmp1;
+    const unsigned int *revcmp2 = ckps->revcmp2;
+    unsigned long i, j;
+    double pf;
+    /* pf : pairwise feature */
+    for(j = 0; j < p; j++){
+      if(((*model)->beta[j]) > 0){
+	for(i = 0; i < n; i++){
+	  pf =  ((feature[h_i[i]][kmer1[j]] *
+		  feature[h_j[i]][kmer2[j]]) +
+		 (feature[h_i[i]][revcmp1[j]] *
+		  feature[h_j[i]][revcmp2[j]]));
+	  U[i] -= ((*model)->beta[j]) * pf;
+	}
+      }
+    }
+  }
+
   if(thread_num >= 1){
     int t = 0;
     cmpUdX_args *params;
@@ -355,7 +379,7 @@ int l2boost_train(const cmd_args *args,
 
       /* prepare for thread programming */
       pthread_prep(thread_num, n, p, 
-		   feature, data, ckps,
+		   feature, data, ckps, 
 		   U, UdX, Xnormsq, 
 		   &params, &threads);
 		   

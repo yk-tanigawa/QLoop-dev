@@ -38,7 +38,7 @@ cd ${PROG_DIR}
 #make clean
 #make twin
 
-#${PROG_DIR}/twin -v
+${PROG_DIR}/twin -v
 
 ${PROG_DIR}/twin \
     -k ${k} \
