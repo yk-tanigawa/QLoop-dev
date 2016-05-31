@@ -48,6 +48,16 @@ int show_usage(FILE *fp,
   return 0;
 }
 
+int show_usage_pred(FILE *fp, 
+		    const char *prog_name){
+  fprintf(fp, "%s [INFO] ", prog_name);
+  fprintf(fp, "usage:\n");
+  fprintf(fp, 
+	  "%s -k k --res r [--margin M] --fasta f --hic H --kmer c --out o --pri p [--verbose V] --thread_num t \n",
+	  prog_name);
+  return 0;
+}
+
 int cmd_args_chk(const cmd_args *args){
   int errflag = 0;
 
@@ -179,6 +189,111 @@ int cmd_args_chk(const cmd_args *args){
   return 0;
 }
 
+int cmd_args_chk_pred(const cmd_args *args){
+  int errflag = 0;
+
+  /* parameters */
+
+  if(args->k <= 0){	       
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "k is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %d\n", "k", args->k);
+  }
+
+  if(args->res <= 0){	       
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "res is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %d\n", "res", args->res);
+  }
+
+  if(args->margin < 0){	       
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "margin is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %d\n", "margin", args->margin);
+  }
+
+  /* input */
+
+  if(args->fasta_file == NULL){
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "fasta file is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %s\n", "fasta_file", args->fasta_file);
+  }
+
+  if(args->hic_file == NULL){
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s", "hic file is not specified");
+    fprintf(stderr, "%s\n", " (we require Hi-C file to obtain the target coordinates)");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %s\n", "hic_file", args->hic_file);
+  }
+
+  if(args->kmer_pair == NULL){
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "k-mer pair file is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %s\n", "kmer_pair", args->kmer_pair);
+  }
+
+  /* output */
+
+  if(args->out_file == NULL){
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "output file is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %s.cmp\n", "out_file", args->out_file);
+  }
+
+  /* saved results */
+
+  if(args->pri_file == NULL){
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "pri file is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %s\n", "pri_file", args->pri_file);
+  }
+
+  /* exec mode */
+  
+  if(args->thread_num <= 0){	       
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "%s\n", "thread_num is not specified");
+    errflag++;
+  }else if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %d\n", "thread_num", args->thread_num);
+  }
+
+  if(errflag > 0){
+    show_usage_pred(stderr, args->prog_name);
+    exit(EXIT_FAILURE);
+  }
+
+
+  return 0;
+}
+
+
 int cmd_args_parse(const int argc, char **argv,	       
 		   cmd_args **args){
   
@@ -218,7 +333,7 @@ int cmd_args_parse(const int argc, char **argv,
 	show_usage(stdout, argv[0]);
 	exit(EXIT_SUCCESS);
       case 'v': /* version*/
-	fprintf(stdout, "version: 0.55\n");
+	fprintf(stdout, "version: 0.56\n");
 	exit(EXIT_SUCCESS);
 
       /* parameters */

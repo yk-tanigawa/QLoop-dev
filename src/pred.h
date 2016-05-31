@@ -4,80 +4,105 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "constant.h"
 #include "cmd_args.h"
-#include "mywc.h"
+
 #include "calloc_errchk.h"
+#include "hic.h"
+#include "kmer.h"
+#include "l2boost.h"
 
-/* Hi-C data */
-typedef struct _hic {
-  unsigned long nrow;
-  unsigned int *i;
-  unsigned int *j;
-  double *mij;
-} hic;
+int predict(const cmd_args *,		
+	    const double **,
+	    const hic *,
+	    const canonical_kp *,
+	    const l2boost *,	 
+	    double **,
+	    FILE *);
+int pred_cmp_file(const cmd_args *,
+		  const hic *,
+		  const double *,
+		  FILE *);
 
-int hic_read(const cmd_args *, hic **);
-	     
-/**
- * read Hi-C data from a file 
- */
+int predict(const cmd_args *args,		
+	    const double **feature,
+	    const hic *data,
+	    const canonical_kp *ckps,
+	    const l2boost *model,	 
+	    double **pred,
+	    FILE *fp){
+  const unsigned long n = data->nrow;
+  const unsigned long p = ckps->num;
+  const unsigned int *h_i = data->i;
+  const unsigned int *h_j = data->j;
+  const unsigned int *kmer1 = ckps->kmer1;
+  const unsigned int *kmer2 = ckps->kmer2;
+  const unsigned int *revcmp1 = ckps->revcmp1;
+  const unsigned int *revcmp2 = ckps->revcmp2;
+  unsigned long i, j;
+  double pf;
 
-int hic_read(const cmd_args *args,
-	     hic **data){
+  fprintf(fp, "%s [INFO] ", args->prog_name);
+  fprintf(fp, "start prediction of interatcion intensities \n");
 
-  {
-    /* allocate memory */
-    *data         = calloc_errchk(1, sizeof(hic), "calloc hic");   
-    (*data)->nrow = mywc(args->hic_file);  
-    (*data)->i    = calloc_errchk((*data)->nrow, sizeof(unsigned int),
-				  "calloc hic (*data)->i");
-    (*data)->j    = calloc_errchk((*data)->nrow, sizeof(unsigned int),
-				  "calloc hic (*data)->j");
-    (*data)->mij  = calloc_errchk((*data)->nrow, sizeof(double), 
-				  "calloc hic (*data)->mij");
-  }
+  /* allocate memory */
+  *pred = calloc_errchk(n, sizeof(double),
+			"calloc pred[]");
 
-  /* read from a file */
-  {
-    FILE *fp;
-    char buf[BUF_SIZE], tmp_mij_str[BUF_SIZE];
-    unsigned int tmp_i = 0, tmp_j = 0;
-    unsigned long row = 0;
-
-    fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "start reading Hi-C file from %s\n",
-	    args->hic_file);
-
-    if((fp = fopen(args->hic_file, "r")) == NULL){
-      fprintf(stderr, "error: fopen %s\n%s\n",
-	      args->hic_file, strerror(errno));
-      exit(EXIT_FAILURE);
-    }
-    
-    while(fgets(buf, BUF_SIZE, fp) && row < (*data)->nrow){
-      sscanf(buf, "%d\t%d\t%s", &tmp_i, &tmp_j, (char *)(&tmp_mij_str));	 
-      ((*data)->mij)[row] = strtod(tmp_mij_str, NULL);	  
-      if(tmp_i <= tmp_j){
-	((*data)->i)[row] = tmp_i / args->res;
-	((*data)->j)[row] = tmp_j / args->res;
-      }else{
-	((*data)->i)[row] = tmp_j / args->res;
-	((*data)->j)[row] = tmp_i / args->res;
+  /* pf : pairwise feature */
+  for(j = 0; j < p; j++){
+    if((model->beta[j]) != 0){
+      for(i = 0; i < n; i++){
+	pf =  ((feature[h_i[i]][kmer1[j]] *
+		feature[h_j[i]][kmer2[j]]) +
+	       (feature[h_i[i]][revcmp1[j]] *
+		feature[h_j[i]][revcmp2[j]]));
+	(*pred)[i] += (model->beta)[j] * pf;
       }
-      row++;
     }
-  
-    fclose(fp);
-
-    fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "# of Hi-C data points = %ld\n",
-	    (*data)->nrow);
-
   }
 
   return 0;
 }
 
+int pred_cmp_file(const cmd_args *args,
+		  const hic *data,
+		  const double *pred,
+		  FILE *fp){
+  const unsigned int *h_i = data->i;
+  const unsigned int *h_j = data->j;
+  const double *mij = data->mij;
+  const unsigned long n = data->nrow;
+  unsigned long i;
+  FILE *fp_file;
+  char out_file_name[BUF_SIZE];
+  sprintf(out_file_name, 
+	  "%s.cmp", args->out_file);
+
+  if((fp_file = fopen(out_file_name, "w")) == NULL){
+    fprintf(stderr, "error: fopen %s\n%s\n",
+	    out_file_name, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  fprintf(fp, "%s [INFO] ", args->prog_name);
+  fprintf(fp, "start writing cmp file to : %s\n",
+	  out_file_name);
+
+  fprintf(fp_file, "i\tj\tobs\tpred\n");
+
+  for(i = 0; i < n; i++){
+    fprintf(fp_file, "%d\t%d\t%e\t%e\n",
+	    h_i[i], h_j[i], mij[i], pred[i]);
+  }
+
+  fclose(fp_file);
+
+
+  return 0;
+}
+
 #endif
+

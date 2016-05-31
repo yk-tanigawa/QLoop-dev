@@ -6,8 +6,7 @@
 #$ -S /bin/sh
 #$ -cwd
 #$ -V
-#$ -q 24core.q
-#$ -pe smp 24
+#$ -q all.q
 
 CHR="chr21"
 RES="1k"
@@ -18,9 +17,6 @@ MARGIN=500
 EXP=${NORM}
 k=5
 ELIMINATE="GATC"
-iter1=500
-iter2=100
-acc=1.0
 
 version="v0.56"
 PROG_DIR="/work2/yt/QLoop-dev"
@@ -38,19 +34,16 @@ cd ${PROG_DIR}
 #make clean
 #make twin
 
-${PROG_DIR}/twin -v
+${PROG_DIR}/pred -v
 
-${PROG_DIR}/twin \
+${PROG_DIR}/pred \
     -k ${k} \
     --res 1000 \
     --margin ${MARGIN} \
-    --iter1 ${iter1} \
-    --iter2 ${iter2} \
-    --acc ${acc} \
     --fasta ${FASTA} \
     --hic ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm \
     --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
     --pri ${PRI} \
-    --out ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm.k${k}     
+    --out ${PRI}.${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm
 
 #git checkout master

@@ -1,8 +1,10 @@
 #include <stdio.h>
 
 #include "src/constant.h"
+#include "src/mywc.h"
 #include "src/cmd_args.h"
 #include "src/fasta.h"
+#include "src/hic.h"
 #include "src/kmer.h"
 #include "src/l2boost.h"
 #include "src/pred.h"
@@ -15,21 +17,39 @@ int main(int argc, char **argv){
   }
 
   double **kmer_freq_odds;
+  hic *data;
   canonical_kp *ckps;
   {
     set_kmer_freq_odds((const cmd_args *)args, &kmer_freq_odds);
+    hic_read((const cmd_args *)args, &data);
     canonical_kp_read((const cmd_args *)args, &ckps);
   }
 
   l2boost *model;
-  l2boost_train((const cmd_args *)args,		
-		(const double **)kmer_freq_odds,
-		(const hic *)data,
-		(const canonical_kp *)ckps,
-		(const unsigned int)args->iter1,
-		0.5,
-		&model,
-		stderr);
+  double *pred;
+  {
 
+    l2boost_load((const cmd_args *)args,
+		 (const canonical_kp *)ckps,	   
+		 (const unsigned int)mywc(args->pri_file),
+		 (const char *)args->pri_file,
+		 &model,
+		 stderr);      
+
+    predict((const cmd_args *)args,		
+	    (const double **)kmer_freq_odds,
+	    (const hic *)data,
+	    (const canonical_kp *)ckps,
+	    (const l2boost *)model,	 
+	    &pred,
+	    stderr);
+
+    pred_cmp_file((const cmd_args *)args,
+		  (const hic *)data,
+		  (const double *)pred,
+		  stderr);
+
+
+  }
   return 0;
 }

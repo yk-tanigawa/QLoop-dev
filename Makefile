@@ -9,7 +9,7 @@ EXEC = $(SRCS:.c=)
 RM = rm -f
 
 
-all: twin
+all: twin pred
 
 pred.o: src/cmd_args.h src/fasta.h src/kmer.h src/pred.h
 
