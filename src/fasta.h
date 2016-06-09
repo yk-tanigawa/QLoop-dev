@@ -91,7 +91,7 @@ inline int c2i(const char c){
 }
 
 int set_kmer_freq_odds(const cmd_args *args,
-		       double ***kmer_freq_odds){
+		       double ***features){
   char *seq_head, *seq;
   unsigned long seq_len, bin_num;
 
@@ -109,8 +109,8 @@ int set_kmer_freq_odds(const cmd_args *args,
 
   {
     /* allocate memory for k-mer frequency odds table */  
-    *kmer_freq_odds = calloc_errchk(bin_num, sizeof(double *),
-				    "kmer_freq_odds");			      
+    *features = calloc_errchk(bin_num, sizeof(double *),
+				    "features");			      
   }
 
   {
@@ -136,13 +136,13 @@ int set_kmer_freq_odds(const cmd_args *args,
 	}
       }
       if(contain_n != 0){
-	(*kmer_freq_odds)[bin] = NULL;
+	(*features)[bin] = NULL;
       }else{       
 	unsigned int kmer = 0;
 	/* For bins not containing 'N', allocate memory */
-	(*kmer_freq_odds)[bin] = calloc_errchk(bit_mask + 1,
+	(*features)[bin] = calloc_errchk(bit_mask + 1,
 					       sizeof(double),
-					       "calloc (*kmer_freq_odds)[]");
+					       "calloc (*features)[]");
 	/* convert first (k-1)-mer to bit-encoded sequence */
 	for(i = bin * res - margin;
 	    i < bin * res - margin + k - 1; i++){
@@ -154,7 +154,7 @@ int set_kmer_freq_odds(const cmd_args *args,
 	    i < (bin + 1) * res + k - 1 + margin; i++){
 	  kmer <<= 2;
 	  kmer += (c2i(seq[i]) & 3);
-	  (*kmer_freq_odds)[bin][(kmer & bit_mask)] += 1.0;
+	  (*features)[bin][(kmer & bit_mask)] += 1.0;
 	  kmer_freq_sum[(kmer & bit_mask)] += 1;
 	}
 	valid_bin_num++;
@@ -166,15 +166,16 @@ int set_kmer_freq_odds(const cmd_args *args,
 
     /* conver to k-mer frequency odds */
     for(bin = bin_min; bin < bin_max; bin++){
-      if((*kmer_freq_odds)[bin] != NULL){
+      if((*features)[bin] != NULL){
 	unsigned int kmer;
 	double sum = 0;
 	for(kmer = 0; kmer < bit_mask + 1; kmer++){
-	  (*kmer_freq_odds)[bin][kmer] /= (kmer_freq_sum[kmer]);
-	  sum += (*kmer_freq_odds)[bin][kmer] * (*kmer_freq_odds)[bin][kmer];
+	  (*features)[bin][kmer] /= (kmer_freq_sum[kmer]);
+	  sum += (*features)[bin][kmer] * (*features)[bin][kmer];
 	}
+	/* normalize so that ||(*feature)[bin]||^2 = 1 */
 	for(kmer = 0; kmer < bit_mask + 1; kmer++){
-	  (*kmer_freq_odds)[bin][kmer] /= sum;
+	  (*features)[bin][kmer] /= sum;
 	}
       }
     }
