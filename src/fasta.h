@@ -170,7 +170,9 @@ int set_kmer_freq_odds(const cmd_args *args,
 	unsigned int kmer;
 	double sum = 0;
 	for(kmer = 0; kmer < bit_mask + 1; kmer++){
+#if 0
 	  (*features)[bin][kmer] /= (kmer_freq_sum[kmer]);
+#endif
 	  sum += (*features)[bin][kmer] * (*features)[bin][kmer];
 	}
 	/* normalize so that ||(*feature)[bin]||^2 = 1 */
