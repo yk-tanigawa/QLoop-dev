@@ -2,7 +2,7 @@
 
 set -eu
 
-CIRCOS_TEMP_DIR=`basename ${CSVFILE}`.tmp
+CIRCOS_TEMP_DIR=${OUT_DIR}/`basename ${CSVFILE}`.tmp
 CIRCOS_BIN_DIR="/work2/yt/usr/circos/current/bin"
 
 cat ${CSVFILE} \
@@ -13,7 +13,7 @@ cat ${CSVFILE} \
 echo "circos table viwer complete!"
 
 cat /work2/yt/QLoop-dev/src/circos.conf \
-    | sed -e "s/__DATA__/${CIRCOS_TEMP_DIR}/" \
+    | sed -e "s!__DATA__!${CIRCOS_TEMP_DIR}!" \
     | sed -e "s!__IMGDIR__!${OUT_DIR}!" > ${CIRCOS_TEMP_DIR}/circos.conf 
 
 perl -I/home/yt/perl5/lib/perl5/ ${CIRCOS_BIN_DIR}/circos \
