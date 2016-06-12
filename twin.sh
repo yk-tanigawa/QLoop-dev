@@ -21,9 +21,11 @@ MARGIN=0
 EXP=${NORM}
 k=5
 ELIMINATE="GATC"
-iter1=2000
+iter1=401
 iter2=100
 acc=0.1
+
+PERCENTILE_CIRCOS=0.95
 
 VERSION="v0.58"
 PROG_DIR="/work2/yt/QLoop-dev"
@@ -35,6 +37,15 @@ BED="/data/yt/Encode/wgEncodeAwgDnaseMasterSites.bed"
 
 PRI="/data/yt/QLoop-dev/v0.57/v057_chr21_SQRTVC_mar0_m10M20_acc01.sh.e424194.res"
 
+# output results file
+RES_FILE="${RESULTS_DIR}/${VERSION}_${CHR}_${NORM}_mar${MARGIN}_m${MIN}M${MAX}_nu${acc}_iter${iter1}.res"
+CMP="${RES_FILE}.self"
+
+
+##################################################
+# make a copy of this script
+##################################################
+cat $0 > "${SGE_O_WORKDIR}/${JOB_NAME}.s${JOB_ID}"
 
 ##################################################
 # prreparation step
@@ -76,7 +87,7 @@ git log --oneline --graph --decorate -n3
 make clean
 make twin
 
-# ${PROG_DIR}/twin -v
+${PROG_DIR}/twin -v
 
 ##################################################
 # perform twin Boost
@@ -93,6 +104,55 @@ ${PROG_DIR}/twin \
     --hic ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm \
     --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
     --pri ${PRI} \
-    --out ${RESULTS_DIR}/${VERSION}_${CHR}_${NORM}_mar${MARGIN}_m${MIN}M${MAX}_nu${acc}_iter${iter1}.res
+    --out ${RES_FILE}
+
+##################################################
+# plot summary of the results
+##################################################
+python3 ${PROG_DIR}/src/plt_res.py \
+    -i ${RES_FILE} \
+    -o ${RES_FILE}.png
+
+##################################################
+# circos plot
+##################################################
+python3 ${PROG_DIR}/src/res_dump.py \
+    -r ${RES_FILE} \
+    -c ${KMER}/k${k}.e${ELIMINATE}.ckp \
+    -p ${PERCENTILE_CIRCOS} \
+    -o ${RES_FILE}.p${PERCENTILE_CIRCOS}.csv
+
+OUT_DIR=${RESULTS_DIR} CSVFILE="${RES_FILE}.p${PERCENTILE_CIRCOS}.csv" ${PROG_DIR}/src/make_circos.sh
+
+##################################################
+# git:
+#  switch version and rebuild
+##################################################
+cd ${PROG_DIR}
+
+#git checkout ${VERSION}
+git checkout dev
+
+git log --oneline --graph --decorate -n3
+
+make clean
+make pred
+
+##################################################
+# self prediction
+##################################################
+
+${PROG_DIR}/pred \
+    -k ${k} \
+    --res 1000 \
+    --margin ${MARGIN} \
+    --fasta ${FASTA} \
+    --hic ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm \
+    --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
+    --pri ${RES_FILE} \
+    --out ${CMP}
+
+python3 ${PROG_DIR}/src/scatter_plot.py \
+    -i ${CMP}.cmp
 
 git checkout dev
