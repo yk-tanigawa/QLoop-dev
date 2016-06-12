@@ -20,13 +20,13 @@ MARGIN=0
 EXP=${NORM}
 k=5
 ELIMINATE="GATC"
-iter1=401
+iter1=2000
 iter2=100
 acc=0.1
 
 PERCENTILE_CIRCOS=0.95
 
-VERSION="v0.59"
+VERSION="v0.60"
 PROG_DIR="/work2/yt/QLoop-dev"
 DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQGE30"
 RESULTS_DIR="/data/yt/QLoop-dev/${VERSION}"
@@ -34,7 +34,7 @@ FASTA="/data/yt/hg19/chromosomes/${CHR}.fa"
 KMER="/data/yt/QLoop-dev/canonical_kmer_pair"
 BED="/data/yt/Encode/wgEncodeAwgDnaseMasterSites.bed"
 
-PRI="/data/yt/QLoop-dev/v0.57/v057_chr21_SQRTVC_mar0_m10M20_acc01.sh.e424194.res"
+##PRI="/data/yt/QLoop-dev/v0.57/v057_chr21_SQRTVC_mar0_m10M20_acc01.sh.e424194.res"
 
 # output results file
 RES_FILE="${RESULTS_DIR}/${VERSION}_${CHR}_${NORM}_mar${MARGIN}_m${MIN}M${MAX}_nu${acc}_iter${iter1}.res"
@@ -100,8 +100,7 @@ ${PROG_DIR}/twin \
     --fasta ${FASTA} \
     --hic ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm \
     --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
-    --pri ${PRI} \
-    --out ${RES_FILE}
+    --out ${RES_FILE} # --pri ${PRI} 
 
 ##################################################
 # plot summary of the results
