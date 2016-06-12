@@ -26,7 +26,7 @@ acc=0.1
 
 PERCENTILE_CIRCOS=0.95
 
-VERSION="v0.58"
+VERSION="v0.59"
 PROG_DIR="/work2/yt/QLoop-dev"
 DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQGE30"
 RESULTS_DIR="/data/yt/QLoop-dev/${VERSION}"
