@@ -6,9 +6,8 @@
 #$ -S /bin/sh
 #$ -cwd
 #$ -V
-# -q 24core.q
-#$ -q blade.q
-#$ -pe smp 12
+#$ -q 24core.q
+#$ -pe smp 24
 
 set -eu
 
@@ -27,7 +26,7 @@ acc=0.1
 
 PERCENTILE_CIRCOS=0.95
 
-VERSION="v0.58"
+VERSION="v0.59"
 PROG_DIR="/work2/yt/QLoop-dev"
 DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQGE30"
 RESULTS_DIR="/data/yt/QLoop-dev/${VERSION}"
@@ -79,9 +78,7 @@ fi
 ##################################################
 cd ${PROG_DIR}
 
-#git checkout ${VERSION}
-git checkout dev
-
+git checkout ${VERSION}
 git log --oneline --graph --decorate -n3
 
 make clean
@@ -130,9 +127,7 @@ OUT_DIR=${RESULTS_DIR} CSVFILE="${RES_FILE}.p${PERCENTILE_CIRCOS}.csv" ${PROG_DI
 ##################################################
 cd ${PROG_DIR}
 
-#git checkout ${VERSION}
-git checkout dev
-
+git checkout ${VERSION}
 git log --oneline --graph --decorate -n3
 
 make clean

@@ -32,6 +32,7 @@ int main(int argc, char **argv){
       exit(EXIT_FAILURE);
     }
     l2boost_step_dump_head(fp_out);
+    l2boost_step_dump((const l2boost *)model, 0, 0, 0, 0, 0, fp_out);
 
     if(args->pri_file != NULL){
       l2boost_load((const cmd_args *)args,
