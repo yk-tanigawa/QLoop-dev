@@ -25,13 +25,21 @@ int main(int argc, char **argv){
 
   l2boost *model;
   {
+    FILE *fp_out;
+    if((fp_out = fopen(args->out_file, "w")) == NULL){
+      fprintf(stderr, "error: fopen %s\n%s\n",
+	      args->out_file, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+    l2boost_step_dump_head(fp_out);
+
     if(args->pri_file != NULL){
       l2boost_load((const cmd_args *)args,
 		   (const canonical_kp *)ckps,	       
 		   (const unsigned int)args->iter1,
 		   (const char *)args->pri_file,
 		   &model,
-		   stderr);      
+		   fp_out);      
     }else{
       l2boost_init((const canonical_kp *)ckps,	       
 		   (const unsigned int)args->iter1,
@@ -44,7 +52,10 @@ int main(int argc, char **argv){
 		  (const canonical_kp *)ckps,
 		  (const double)args->acc,
 		  &model,
-		  stderr);
+		  fp_out);
+
+    fclose(fp_out);
+
   }
   return 0;
 }

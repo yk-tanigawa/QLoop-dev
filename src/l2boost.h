@@ -184,17 +184,21 @@ int l2_update_U(double *U,
   return 0;
 }
 
+int l2boost_step_dump_head(FILE *fp){
+  fprintf(fp, "iter \t axis \t gamma \t residuals \t step t \t total t\n");
+  return 0;
+}
+
 int l2boost_step_dump(const l2boost *model,
 		      const unsigned int m,
 		      const unsigned long s,
 		      const double v_gamma,
 		      const double sec_per_step,
 		      const double sec_total,
-		      const char *prog_name,
 		      FILE *fp){
-  fprintf(fp, "%s [INFO] \t ", prog_name);
   fprintf(fp, "%d\t%ld\t%e\t%e\t%f\t%f\n",
 	  m, s, v_gamma, (model->res_sq)[m], sec_per_step, sec_total);
+  fflush(fp);
   return 0;
 }
 
@@ -264,8 +268,8 @@ int l2boost_load(const cmd_args *args,
       exit(EXIT_FAILURE);
     }
 
-    fprintf(fp, "%s [INFO] \t ", args->prog_name);
-    fprintf(fp, "iter \t axis \t gamma \t residuals \t step t \t total t\n");
+    fprintf(stderr, "%s [INFO] \t ", args->prog_name);
+    l2boost_step_dump_head(stderr);
     
     /* skip a header line */
     fgets(buf, BUF_SIZE, fp);
@@ -288,8 +292,12 @@ int l2boost_load(const cmd_args *args,
 
       l2boost_step_dump(*model, m, axis, 
 			strtod(gamma_str, NULL), 0, 0,
-			(const char *)args->prog_name,
 			fp_out);
+      fprintf(stderr, "%s [INFO] \t ", args->prog_name);
+      l2boost_step_dump(*model, m, axis, 
+			strtod(gamma_str, NULL), 0, 0,
+			stderr);
+
 
       (*model)->nextiter = ++m;      
     }
@@ -398,17 +406,17 @@ int l2boost_train(const cmd_args *args,
     cpTimeval(time, &time_prev);
     cpTimeval(time, &time_start);
 
-    fprintf(fp, "%s [INFO] \t ", args->prog_name);
-    fprintf(fp, "iter \t axis \t gamma \t residuals \t step t \t total t\n");
+    fprintf(stderr, "%s [INFO] \t ", args->prog_name);
+    l2boost_step_dump_head(stderr);
 
+    fprintf(stderr, "%s [INFO] \t ", args->prog_name);
     l2boost_step_dump(*model,
 		      (const unsigned int)m, 
 		      (const unsigned long)s,
 		      v * (const double)gamma,
 		      (const double)diffSec(time_prev, time),
 		      (const double)diffSec(time_start, time),
-		      (const char *)args->prog_name,
-		      fp);
+		      stderr);
     
 
     for(m = (*model)->nextiter; m <= (*model)->iternum; m++){
@@ -448,8 +456,15 @@ int l2boost_train(const cmd_args *args,
 			v * (const double)gamma,
 			(const double)diffSec(time_prev, time),
 			(const double)diffSec(time_start, time),
-			(const char *)args->prog_name,
 			fp);
+      fprintf(stderr, "%s [INFO] \t ", args->prog_name);
+      l2boost_step_dump(*model,
+			(const unsigned int)m, 
+			(const unsigned long)s,
+			v * (const double)gamma,
+			(const double)diffSec(time_prev, time),
+			(const double)diffSec(time_start, time),
+			stderr);
       cpTimeval(time, &time_prev);
     }
 
