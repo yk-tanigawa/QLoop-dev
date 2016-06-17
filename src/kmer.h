@@ -14,8 +14,16 @@ typedef struct _canonical_kp{
   unsigned long num;
 } canonical_kp;
 
+typedef struct _kmer{
+  unsigned int *kmer1;
+  int k;
+  unsigned long num;
+} kmer;
+
 int canonical_kp_read(const cmd_args *, canonical_kp **);
-		      
+
+int kmer_read(const cmd_args *, kmer **);
+
 int canonical_kp_read(const cmd_args *args,
 		      canonical_kp **ckps){
   {
@@ -71,5 +79,51 @@ int canonical_kp_read(const cmd_args *args,
 
   return 0;
 }
+
+int kmer_read(const cmd_args *args,
+	      kmer **kmers){
+  {
+    /* allocate memory */
+    *kmers        = calloc_errchk(1, sizeof(kmer), "calloc kmers");   
+    (*kmers)->num = mywc(args->kmer);
+    (*kmers)->kmer1 = calloc_errchk((*kmers)->num, sizeof(unsigned int),
+				    "calloc kmers (*kmers)->kmer1");
+  }
+
+  /* read from a file */
+  {
+    FILE *fp;
+    char buf[BUF_SIZE];
+    char kmer1str[BUF_SIZE];
+    unsigned int kmer1;
+    unsigned long row = 0;
+
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "start reading k-mer file from %s\n",
+	    args->kmer);
+
+    if((fp = fopen(args->kmer, "r")) == NULL){
+      fprintf(stderr, "error: fopen %s\n%s\n",
+	      args->kmer, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+    
+    while(fgets(buf, BUF_SIZE, fp) && row < (*kmers)->num){
+      sscanf(buf, "%d\t%s",
+	     &kmer1, kmer1str);
+      ((*kmers)->kmer1)[row]   = kmer1;
+      row++;
+    }
+  
+    fclose(fp);
+
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "# of k-mers = %ld\n",
+	    (*kmers)->num);
+  }
+
+  return 0;
+}
+
 
 #endif

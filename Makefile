@@ -9,7 +9,7 @@ EXEC = $(SRCS:.c=)
 RM = rm -f
 
 
-all: twin pred
+all: twin pred kmer_filter
 
 pred.o: src/cmd_args.h src/fasta.h src/kmer.h src/pred.h
 
@@ -19,6 +19,11 @@ pred: pred.o
 twin.o: src/cmd_args.h src/fasta.h src/hic.h src/kmer.h src/l2boost.h
 
 twin: twin.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
+kmer_filter.o: src/cmd_args.h src/fasta.h src/hic.h src/kmer.h src/l2boost.h
+
+kmer_filter: kmer_filter.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 main: main.o

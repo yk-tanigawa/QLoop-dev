@@ -20,6 +20,7 @@ typedef struct _cmd_args {
   char *fasta_file;
   char *hic_file;
   char *kmer_pair;
+  char *kmer;
   /* output */
   char *out_file;
   /* saved results */
@@ -365,6 +366,7 @@ int cmd_args_parse(const int argc, char **argv,
 	break;
       case 'c': /* kmer */
 	(*args)->kmer_pair = optarg;
+	(*args)->kmer = optarg;
 	break;
 
       /* output */
