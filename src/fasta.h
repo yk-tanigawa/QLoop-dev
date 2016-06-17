@@ -90,7 +90,7 @@ inline int c2i(const char c){
   }
 }
 
-int set_kmer_freq_odds(const cmd_args *args,
+int set_features(const cmd_args *args,
 		       double ***features){
   char *seq_head, *seq;
   unsigned long seq_len, bin_num;

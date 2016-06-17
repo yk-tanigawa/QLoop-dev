@@ -16,11 +16,11 @@ int main(int argc, char **argv){
     cmd_args_chk_pred(args);
   }
 
-  double **kmer_freq_odds;
+  double **features;
   hic *data;
   canonical_kp *ckps;
   {
-    set_kmer_freq_odds((const cmd_args *)args, &kmer_freq_odds);
+    set_features((const cmd_args *)args, &features);
     hic_read((const cmd_args *)args, &data);
     canonical_kp_read((const cmd_args *)args, &ckps);
   }
@@ -37,7 +37,7 @@ int main(int argc, char **argv){
 		 stderr);      
 
     predict((const cmd_args *)args,		
-	    (const double **)kmer_freq_odds,
+	    (const double **)features,
 	    (const hic *)data,
 	    (const canonical_kp *)ckps,
 	    (const l2boost *)model,	 
