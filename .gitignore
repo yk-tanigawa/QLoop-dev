@@ -4,3 +4,4 @@ a.out
 *.libsvm
 data
 data/*
+*/__pycache__/*
