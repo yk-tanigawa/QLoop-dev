@@ -16,8 +16,6 @@ int fasta_read(const char *, char **, char **, unsigned long *);
 int c2i(const char);
 int set_kmer_freq_odds(const cmd_args *, double ***);
 		  
-
-
 /* read fasta file */
 int fasta_read(const char *fasta_file, 
 	       char **seq_head,
@@ -91,7 +89,7 @@ inline int c2i(const char c){
 }
 
 int set_features(const cmd_args *args,
-		       double ***features){
+		 double ***features){
   char *seq_head, *seq;
   unsigned long seq_len, bin_num;
 
@@ -164,29 +162,33 @@ int set_features(const cmd_args *args,
     fprintf(stderr, "%s [INFO] ", args->prog_name);
     fprintf(stderr, "# of valid bins : %ld\n", valid_bin_num);
 
-    /* conver to k-mer frequency odds */
-    for(bin = bin_min; bin < bin_max; bin++){
-      if((*features)[bin] != NULL){
-	unsigned int kmer;
-	double sum = 0;
-	for(kmer = 0; kmer < bit_mask + 1; kmer++){
-#if 0
-	  (*features)[bin][kmer] /= (kmer_freq_sum[kmer]);
-#endif
-	  sum += (*features)[bin][kmer] * (*features)[bin][kmer];
-	}
 
-	/* normalize L_1 norm */
-	for(kmer = 0; kmer < bit_mask + 1; kmer++){
-	  (*features)[bin][kmer] /= (bit_mask + 1);
-	}
 
-#if 0
-	/* normalize so that ||(*feature)[bin]||^2 = 1 */
-	for(kmer = 0; kmer < bit_mask + 1; kmer++){
-	  (*features)[bin][kmer] /= sum;
+    if(args->f_norm != NONE){
+      /* normalize feature vector */
+
+      for(bin = bin_min; bin < bin_max; bin++){
+	if((*features)[bin] != NULL){
+	  unsigned int kmer;
+
+	  if(args->f_norm == L1){
+	    /* normalize L_1 norm */
+	    for(kmer = 0; kmer < bit_mask + 1; kmer++){
+	      (*features)[bin][kmer] /= (bit_mask + 1);
+	    }
+	  }
+
+	  if(args->f_norm == L2){
+	    /* normalize L_2 norm */
+	    double sum = 0;
+	    for(kmer = 0; kmer < bit_mask + 1; kmer++){
+	      sum += (*features)[bin][kmer] * (*features)[bin][kmer];
+	    }
+	    for(kmer = 0; kmer < bit_mask + 1; kmer++){
+	      (*features)[bin][kmer] /= sum;
+	    }
+	  }	  
 	}
-#endif
       }
     }
   }

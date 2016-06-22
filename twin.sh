@@ -23,10 +23,11 @@ ELIMINATE="GATC"
 iter1=2000
 iter2=100
 acc=0.1
+f_norm="L1"
 
 PERCENTILE_CIRCOS=0.95
 
-VERSION="v0.60"
+VERSION="v0.61"
 PROG_DIR="/work2/yt/QLoop-dev"
 DATA_DIR="/data/yt/GM12878_combined/1kb_resolution_intrachromosomal/${CHR}/MAPQGE30"
 RESULTS_DIR="/data/yt/QLoop-dev/${VERSION}"
@@ -100,6 +101,7 @@ ${PROG_DIR}/twin \
     --fasta ${FASTA} \
     --hic ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm \
     --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
+    --f_norm ${f_norm} \
     --out ${RES_FILE} # --pri ${PRI} 
 
 ##################################################
@@ -144,6 +146,7 @@ ${PROG_DIR}/pred \
     --hic ${DATA_DIR}/${CHR}_${RES}b_m${MIN}_M${MAX}_${NORM}_${EXP}_mar${MARGIN}.log.norm \
     --kmer ${KMER}/k${k}.e${ELIMINATE}.ckp \
     --pri ${RES_FILE} \
+    --f_norm ${f_norm} \
     --out ${CMP}
 
 python3 ${PROG_DIR}/src/scatter_plot.py \

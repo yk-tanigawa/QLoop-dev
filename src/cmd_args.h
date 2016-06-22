@@ -5,8 +5,10 @@
 #include <getopt.h>
 #include <unistd.h>
 
+
 #include "calloc_errchk.h"
 
+typedef enum { NONE , L1 , L2 } f_norm;
 	      
 typedef struct _cmd_args {
   /* parameters */
@@ -30,6 +32,7 @@ typedef struct _cmd_args {
   int verbose_level;
   int thread_num;
   char *prog_name;
+  f_norm f_norm;
 } cmd_args;
 
 
@@ -181,6 +184,12 @@ int cmd_args_chk(const cmd_args *args){
     fprintf(stderr, "%s : %d\n", "thread_num", args->thread_num);
   }
 
+  if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %d\n", "f_norm", args->f_norm);
+  }
+
+
   if(errflag > 0){
     show_usage(stderr, args->prog_name);
     exit(EXIT_FAILURE);
@@ -285,6 +294,11 @@ int cmd_args_chk_pred(const cmd_args *args){
     fprintf(stderr, "%s : %d\n", "thread_num", args->thread_num);
   }
 
+  if(errflag == 0){
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "%s : %d\n", "f_norm", args->f_norm);
+  }
+
   if(errflag > 0){
     show_usage_pred(stderr, args->prog_name);
     exit(EXIT_FAILURE);
@@ -321,20 +335,22 @@ int cmd_args_parse(const int argc, char **argv,
     /* exec_mode */
     {"verbose",   required_argument, NULL, 'V'},
     {"thread",    required_argument, NULL, 't'},
+    {"f_norm",    required_argument, NULL, 'L'},
     {0, 0, 0, 0}
   };
 
   *args = calloc_errchk(1, sizeof(cmd_args), 
 			"calloc: command line args");
+  (*args)->f_norm = NONE;
 
-  while((opt = getopt_long(argc, argv, "hvk:r:M:n:m:a:f:H:c:o:p:s:V:t:",
+  while((opt = getopt_long(argc, argv, "hvk:r:M:n:m:a:f:H:c:o:p:s:V:t:L:",
 			   long_opts, &opt_idx)) != -1){
     switch (opt){
       case 'h': /* help */
 	show_usage(stdout, argv[0]);
 	exit(EXIT_SUCCESS);
       case 'v': /* version*/
-	fprintf(stdout, "version: 0.60\n");
+	fprintf(stdout, "version: 0.61\n");
 	exit(EXIT_SUCCESS);
 
       /* parameters */
@@ -389,6 +405,14 @@ int cmd_args_parse(const int argc, char **argv,
       case 't': /* thread_num */
 	(*args)->thread_num = atoi(optarg);
 	break;
+      case 'L': /* f_norm */
+	if(strcmp(optarg, "L1") == 0){
+	  (*args)->f_norm = L1;
+	}else if(strcmp(optarg, "L2") == 0){
+	  (*args)->f_norm = L2;
+	}
+	break;
+
     }
   }
 
