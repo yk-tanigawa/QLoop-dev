@@ -3,19 +3,31 @@
 
 #include <sys/time.h>
 #include <math.h>
+#include <pthread.h>
 #include "calloc_errchk.h"
 #include "diffSec.h"
-#include "io.h"
 #include "kmer.h"
+#include "hic.h"
 
 
 /* adaboost results*/
+#if 0
 typedef struct _adaboost{
   unsigned long T;
   unsigned long *axis;
   double *beta;
   unsigned int *sign;
 } adaboost;
+
+/* L2 boost results*/
+#endif
+typedef struct _adaboost{
+  double *res_sq;
+  double *beta;
+  unsigned int nextiter;
+  unsigned int iternum;
+} adaboost;
+
 
 /* arguments for function adaboost_comp_err */
 typedef struct _adaboost_comp_err_args{
