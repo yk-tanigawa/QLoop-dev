@@ -29,7 +29,7 @@ int main(int argc, char **argv){
   double *pred;
   {
 
-    l2_init((const cmd_args *)args,
+    boost_init((const cmd_args *)args,
 		 (const canonical_kp *)ckps,	   
 		 (const unsigned int)mywc(args->pri_file),
 		 (const char *)args->pri_file,

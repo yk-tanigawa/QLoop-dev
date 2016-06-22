@@ -44,7 +44,7 @@ int main(int argc, char **argv){
 		   &model,
 		   fp_out);      
     }else{
-      l2_init((const canonical_kp *)ckps,	       
+      boost_init((const canonical_kp *)ckps,	       
 		   (const unsigned int)args->iter1,
 		   &model);
     }

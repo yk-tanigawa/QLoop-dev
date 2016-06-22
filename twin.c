@@ -33,7 +33,7 @@ int main(int argc, char **argv){
     }
 
 
-    l2_init((const cmd_args *)args,
+    boost_init((const cmd_args *)args,
 		 (const canonical_kp *)ckps,	       
 		 (const unsigned int)args->iter1,
 		 (const char *)args->pri_file,
