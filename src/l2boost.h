@@ -34,6 +34,55 @@ typedef struct _cmpUdX_args{
   double *Xnormsq;
 } cmpUdX_args;
 
+
+void *cmpUdX(void *args);
+void *cmpXnormsq(void *args);
+int dump_model(const l2boost *model, 
+	       const unsigned long p);
+int pthread_prep(const int thread_num,
+		 const unsigned long n,
+		 const unsigned long p,		 
+		 const double **feature,
+		 const hic *data,
+		 const canonical_kp *ckps,
+		 double *U,
+		 double *UdX,
+		 double *Xnormsq,
+		 cmpUdX_args **params,
+		 pthread_t **threads);
+int l2_update_U(double *U, 
+		double *residual_square,
+		const unsigned int m,
+		const unsigned long n,
+		const unsigned long s,
+		const double **feature,
+		const hic *data,
+		const canonical_kp *ckps,
+		const double gamma, 
+		const double v);
+int l2boost_step_dump_head(FILE *fp);
+int l2boost_step_dump(const l2boost *model,
+		      const unsigned int m,
+		      const unsigned long s,
+		      const double v_gamma,
+		      const double sec_per_step,
+		      const double sec_total,
+		      FILE *fp);
+int l2boost_init(const cmd_args *args,
+		 const canonical_kp *ckps,
+		 const unsigned int iternum,
+		 const char *file,
+		 l2boost **model,
+		 FILE *fp_out);
+int l2boost_train(const cmd_args *args,
+		  const double **feature,
+		  const hic *data,
+		  const canonical_kp *ckps,
+		  const double v,
+		  l2boost **model,
+		  FILE *fp);
+
+
 void *cmpUdX(void *args){
   /* unstack parameters */
   const cmpUdX_args *params = (cmpUdX_args *)args;
@@ -222,10 +271,11 @@ int l2boost_init(const cmd_args *args,
   }
 
   l2boost_step_dump_head(fp_out);
-  fprintf(fp_out, "%d\t%ld\t%e\t%e\t%f\t%f\n",
-	  0, (long int)0, 0.0, 1.0, 0.0, 0.0);
 
-  if(file != NULL){
+  if(file == NULL){
+    fprintf(fp_out, "%d\t%ld\t%e\t%e\t%f\t%f\n",
+	    0, (long int)0, 0.0, 1.0, 0.0, 0.0);
+  }else{
     /* read from a file */
     {
       FILE *fp;
@@ -296,7 +346,6 @@ int l2boost_init(const cmd_args *args,
   }
   return 0;
 }
-
 			  
 int l2boost_train(const cmd_args *args,
 		  const double **feature,
@@ -391,6 +440,7 @@ int l2boost_train(const cmd_args *args,
     fprintf(stderr, "%s [INFO] ", args->prog_name);
     fprintf(stderr, "Xnormsq finished in %f sec.\n", diffSec(time_prev, time));
 
+#if 0
     {
       unsigned int tmp;
       for(tmp = 0; tmp < p; tmp++){
@@ -398,23 +448,11 @@ int l2boost_train(const cmd_args *args,
       }
       fprintf(stderr, "\n");
     }
+#endif
 
     cpTimeval(time, &time_prev);
     cpTimeval(time, &time_start);
-
-    fprintf(stderr, "%s [INFO] \t ", args->prog_name);
-    l2boost_step_dump_head(stderr);
-
-    fprintf(stderr, "%s [INFO] \t ", args->prog_name);
-    l2boost_step_dump(*model,
-		      (const unsigned int)m, 
-		      (const unsigned long)s,
-		      v * (const double)gamma,
-		      (const double)diffSec(time_prev, time),
-		      (const double)diffSec(time_start, time),
-		      stderr);
     
-
     for(m = (*model)->nextiter; m <= (*model)->iternum; m++){
       /* compute inner product $U \cdot X^{(j)}$ */
       {

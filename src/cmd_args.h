@@ -417,9 +417,10 @@ int cmd_args_parse(const int argc, char **argv,
   }
 
   {
-    (*args)->prog_name = calloc_errchk(strlen(argv[0]), sizeof(char),
+    (*args)->prog_name = calloc_errchk(strlen(argv[0]) + 1, sizeof(char),
 				    "(*args)->prog_name");
     strncpy((*args)->prog_name, argv[0], strlen(argv[0]));
+    (*args)->prog_name[strlen(argv[0])] = '\0';
   }
 
   /* set thread_num */
