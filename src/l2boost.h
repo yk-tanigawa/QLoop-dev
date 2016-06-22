@@ -525,9 +525,9 @@ int l2_train(const cmd_args *args,
   return 0;
 }
 
-#if 0
+
 /**
- * Ada Boosting 
+ * AdaBoost
  **/
 
 void *ada_cmpUdX(void *args){
@@ -538,7 +538,7 @@ void *ada_cmpUdX(void *args){
   const unsigned int *h_j = params->data->j;
   const double *Y = params->data->mij;
   const double *beta_x = params->U;
-  const unsigned int *kmer = params->kmers->kmer;
+  const unsigned int *kmer = params->kmers->kmer1;
 
   /* compute the dot product between U and X^{(j)} */
   unsigned int i, j;
@@ -547,15 +547,14 @@ void *ada_cmpUdX(void *args){
     TT = TF = FT = FF = 0;
     for(i = 0; i < params->n; i++){
       /* (i, m^{i,j}) */
-      if(((beta_x[2 * i] >= 0) && (Y[i] >= 0)) ||
-	 ((beta_x[2 * i] <  0) && (Y[i] <  0))){
-	if((feature[h_i[i]][kmer[s]] * Y[i]) > 0){
+      if((beta_x[2 * i] * Y[i]) >= 0){
+	if((feature[h_i[i]][kmer[j]] * Y[i]) > 0){
 	  TT += 1;
 	}else{
 	  TF += 1;
 	}
       }else{
-	if((feature[h_i[i]][kmer[s]] * Y[i]) > 0){
+	if((feature[h_i[i]][kmer[j]] * Y[i]) > 0){
 	  FT += 1;
 	}else{
 	  FF += 1;
@@ -563,33 +562,21 @@ void *ada_cmpUdX(void *args){
       }      
       
       /* (j, m^{i,j}) */
-      if(((beta_x[2 * i + 1] >= 0) && (Y[i] >= 0)) ||
-	 ((beta_x[2 * i + 1] <  0) && (Y[i] <  0))){
-	if((feature[h_j[i]][kmer[s]] * Y[i]) > 0){
+      if((beta_x[2 * i + 1] * Y[i]) >= 0){
+	if((feature[h_j[i]][kmer[j]] * Y[i]) > 0){
 	  TT += 1;
 	}else{
 	  TF += 1;
 	}
       }else{
-	if((feature[h_j[i]][kmer[s]] * Y[i]) > 0){
+	if((feature[h_j[i]][kmer[j]] * Y[i]) > 0){
 	  FT += 1;
       }else{
 	  FF += 1;
 	}
       }           
     }
-
     (params->UdX)[j] = 1.0 * (TT - TF) * exp(-1) + 1.0 * (FT- FF) * exp(1);
-
-#if 0
-    for(i = 0; i < params->n; i++){
-      sum += (params->U)[i] * ((feature[h_i[i]][kmer1[j]] *
-				feature[h_j[i]][kmer2[j]]) +
-			       (feature[h_i[i]][revcmp1[j]] *
-				feature[h_j[i]][revcmp2[j]]));
-    }
-    (params->UdX)[j] = sum;
-#endif
   }
   return NULL;
 }
@@ -601,66 +588,48 @@ int ada_update_beta_x(double *beta_x,
 		      const unsigned long s,
 		      const double **feature,
 		      const hic *data,
-		      const canonical_kp *ckps,
+		      const kmer *kmers,
 		      const double gamma, 
 		      const double v){
   const unsigned int *h_i = data->i;
   const unsigned int *h_j = data->j;
   const double *Y = data->mij;
-  const unsigned int *kmer1 = ckps->kmer1;
-  const unsigned int *kmer2 = ckps->kmer2;
-  const unsigned int *revcmp1 = ckps->revcmp1;
-  const unsigned int *revcmp2 = ckps->revcmp2;
-  unsigned long i;
-  //double sum = 0, pf = 0;
-  unsigned long TT = 0, TF = 0, FT = 0, FF = 0;
+  const unsigned int *kmer = kmers->kmer1;
+
+  unsigned long i = 0;
+  unsigned long err = 0;
+
+  /* update beta_x */
   for(i = 0; i < n; i++){
     /* (i, m^{i,j}) */
-    if(((beta_x[2 * i] >= 0) && (Y[i] >= 0)) ||
-       ((beta_x[2 * i] <  0) && (Y[i] <  0))){
-      if((feature[h_i[i]][kmer[s]] * Y[i]) > 0){
-	TT += 1;
-      }else{
-	TF += 1;
-      }
+    if((feature[h_i[i]][kmer[s]]) > 0){
+      beta_x[2 * i] += v * gamma;
     }else{
-      if((feature[h_i[i]][kmer[s]] * Y[i]) > 0){
-	FT += 1;
-      }else{
-	FF += 1;
-      }
-    }      
-
+      beta_x[2 * i] -= v * gamma;
+    }
     /* (j, m^{i,j}) */
-    if(((beta_x[2 * i + 1] >= 0) && (Y[i] >= 0)) ||
-       ((beta_x[2 * i + 1] <  0) && (Y[i] <  0))){
-      if((feature[h_j[i]][kmer[s]] * Y[i]) > 0){
-	TT += 1;
-      }else{
-	TF += 1;
-      }
+    if((feature[h_j[i]][kmer[s]]) > 0){
+      beta_x[2 * i + 1] += v * gamma;
     }else{
-      if((feature[h_j[i]][kmer[s]] * Y[i]) > 0){
-	FT += 1;
-      }else{
-	FF += 1;
-      }
-    }      
-
-#if 0
-    /* pf : pairwise feature */
-    pf =  ((feature[h_i[i]][kmer1[s]] *
-	    feature[h_j[i]][kmer2[s]]) +
-	   (feature[h_i[i]][revcmp1[s]] *
-	    feature[h_j[i]][revcmp2[s]]));
-    U[i] -= v * gamma * pf;
-    sum += 1.0 * U[i] * U[i] / n;
-#endif
+      beta_x[2 * i + 1] -= v * gamma;
+    }
   }
-  residual_square[m] = sum;
+
+  /* count error rate */
+  for(i = 0; i < n; i++){
+    if((beta_x[2 * i] * Y[i]) < 0){
+      err += 1;
+    }
+    if((beta_x[2 * i + 1] * Y[i]) < 0){
+      err += 1;
+    }
+  }
+
+  residual_square[m] = 0.5 * err / n;
   return 0;
 }
 
+#if 0
 int ada_init(const cmd_args *args,
 	    const canonical_kp *ckps,
 	    const unsigned int iternum,
@@ -888,10 +857,10 @@ int ada_train(const cmd_args *args,
       ((*model)->beta)[s] += v * gamma;
 
       /* Update U[] and sum of residual square */
-      ada_update_U(U, (*model)->res_sq, 
-		  (const unsigned int)m, n, s, 
-		  feature, data, ckps,
-		  (const double)gamma, v);
+      ada_update_beta_x(U, (*model)->res_sq, 
+			(const unsigned int)m, n, s, 
+			feature, data, ckps,
+			(const double)gamma, v);
       
       gettimeofday(&time, NULL);
       boost_step_dump(*model,
