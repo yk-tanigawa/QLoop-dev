@@ -403,6 +403,15 @@ int l2boost_train(const cmd_args *args,
 
     fprintf(stderr, "%s [INFO] ", args->prog_name);
     fprintf(stderr, "Xnormsq finished in %f sec.\n", diffSec(time_prev, time));
+
+    {
+      unsigned int tmp;
+      for(tmp = 0; tmp < p; tmp++){
+	fprintf(stderr, "%e\t", Xnormsq[tmp]);
+      }
+      fprintf(stderr, "\n");
+    }
+
     cpTimeval(time, &time_prev);
     cpTimeval(time, &time_start);
 

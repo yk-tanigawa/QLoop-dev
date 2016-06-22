@@ -175,10 +175,12 @@ int set_features(const cmd_args *args,
 #endif
 	  sum += (*features)[bin][kmer] * (*features)[bin][kmer];
 	}
+#if 0
 	/* normalize so that ||(*feature)[bin]||^2 = 1 */
 	for(kmer = 0; kmer < bit_mask + 1; kmer++){
 	  (*features)[bin][kmer] /= sum;
 	}
+#endif
       }
     }
   }
