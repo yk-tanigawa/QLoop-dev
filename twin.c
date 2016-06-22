@@ -23,7 +23,7 @@ int main(int argc, char **argv){
     canonical_kp_read((const cmd_args *)args, &ckps);
   }
 
-  l2boost *model;
+  boost *model;
   {
     FILE *fp_out;
     if((fp_out = fopen(args->out_file, "w")) == NULL){
@@ -33,14 +33,14 @@ int main(int argc, char **argv){
     }
 
 
-    l2boost_init((const cmd_args *)args,
+    l2_init((const cmd_args *)args,
 		 (const canonical_kp *)ckps,	       
 		 (const unsigned int)args->iter1,
 		 (const char *)args->pri_file,
 		 &model,
 		 fp_out);      
 
-    l2boost_train((const cmd_args *)args,		
+    l2_train((const cmd_args *)args,		
 		  (const double **)features,
 		  (const hic *)data,
 		  (const canonical_kp *)ckps,

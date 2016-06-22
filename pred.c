@@ -25,11 +25,11 @@ int main(int argc, char **argv){
     canonical_kp_read((const cmd_args *)args, &ckps);
   }
 
-  l2boost *model;
+  boost *model;
   double *pred;
   {
 
-    l2boost_init((const cmd_args *)args,
+    l2_init((const cmd_args *)args,
 		 (const canonical_kp *)ckps,	   
 		 (const unsigned int)mywc(args->pri_file),
 		 (const char *)args->pri_file,
@@ -40,7 +40,7 @@ int main(int argc, char **argv){
 	    (const double **)features,
 	    (const hic *)data,
 	    (const canonical_kp *)ckps,
-	    (const l2boost *)model,	 
+	    (const boost *)model,	 
 	    &pred,
 	    stderr);
 

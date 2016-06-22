@@ -18,7 +18,7 @@ int predict(const cmd_args *,
 	    const double **,
 	    const hic *,
 	    const canonical_kp *,
-	    const l2boost *,	 
+	    const boost *,	 
 	    double **,
 	    FILE *);
 int pred_cmp_file(const cmd_args *,
@@ -30,7 +30,7 @@ int predict(const cmd_args *args,
 	    const double **feature,
 	    const hic *data,
 	    const canonical_kp *ckps,
-	    const l2boost *model,	 
+	    const boost *model,	 
 	    double **pred,
 	    FILE *fp){
   const unsigned long n = data->nrow;
