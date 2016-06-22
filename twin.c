@@ -31,22 +31,14 @@ int main(int argc, char **argv){
 	      args->out_file, strerror(errno));
       exit(EXIT_FAILURE);
     }
-    l2boost_step_dump_head(fp_out);
-    fprintf(fp_out, "%d\t%ld\t%e\t%e\t%f\t%f\n",
-	    0, (long int)0, 0.0, 1.0, 0.0, 0.0);
 
-    if(args->pri_file != NULL){
-      l2boost_load((const cmd_args *)args,
-		   (const canonical_kp *)ckps,	       
-		   (const unsigned int)args->iter1,
-		   (const char *)args->pri_file,
-		   &model,
-		   fp_out);      
-    }else{
-      l2boost_init((const canonical_kp *)ckps,	       
-		   (const unsigned int)args->iter1,
-		   &model);
-    }
+
+    l2boost_init((const cmd_args *)args,
+		 (const canonical_kp *)ckps,	       
+		 (const unsigned int)args->iter1,
+		 (const char *)args->pri_file,
+		 &model,
+		 fp_out);      
 
     l2boost_train((const cmd_args *)args,		
 		  (const double **)features,

@@ -194,7 +194,7 @@ int set_features(const cmd_args *args,
   }
 
   fprintf(stderr, "%s [INFO] ", args->prog_name);
-  fprintf(stderr, "computation of k-mer frequency odds finished\n");
+  fprintf(stderr, "computation of feature vectors finished\n");
 
   return 0;
 }

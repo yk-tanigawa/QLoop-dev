@@ -202,26 +202,7 @@ int l2boost_step_dump(const l2boost *model,
   return 0;
 }
 
-int l2boost_init(const canonical_kp *ckps,		 
-		 const unsigned int iternum,
-		 l2boost **model){  
-  const unsigned long p = ckps->num;
-
-  /* allocate memory */
-  {
-    *model = calloc_errchk(1, sizeof(l2boost), "calloc l2boost");
-    (*model)->res_sq = calloc_errchk(iternum + 1, sizeof(double),
-				     "calloc l2boost -> res_sq");
-    (*model)->beta   = calloc_errchk(p, sizeof(double),
-				     "calloc l2boost -> beta");
-    (*model)->iternum = iternum;
-    (*model)->nextiter = 1;
-  }
-
-  return 0;
-}
-
-int l2boost_load(const cmd_args *args,
+int l2boost_init(const cmd_args *args,
 		 const canonical_kp *ckps,
 		 const unsigned int iternum,
 		 const char *file,
@@ -240,76 +221,82 @@ int l2boost_load(const cmd_args *args,
     (*model)->nextiter = 1;
   }
 
-  /* read from a file */
-  {
-    FILE *fp;
-    char buf[BUF_SIZE];
-    char gamma_str[BUF_SIZE], residuals_str[BUF_SIZE];
-    char step_t[BUF_SIZE], total_t[BUF_SIZE];
-    unsigned int iter;
-    unsigned long axis;
-    unsigned int m, model_len;
+  l2boost_step_dump_head(fp_out);
+  fprintf(fp_out, "%d\t%ld\t%e\t%e\t%f\t%f\n",
+	  0, (long int)0, 0.0, 1.0, 0.0, 0.0);
 
-    model_len = mywc(file) - 2;
-
-    if(model_len >= iternum){
-      fprintf(stderr, "%s [ERROR] ", args->prog_name);
-      fprintf(stderr, "iternum (%d) is smaller than saved file (%d)\n",
-	      iternum, model_len);
-      exit(EXIT_FAILURE);
-    }
-
-    fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "start reading model from %s\n", file);
-	    
-    if((fp = fopen(file, "r")) == NULL){
-      fprintf(stderr, "error: fopen %s\n%s\n",
-	      file, strerror(errno));
-      exit(EXIT_FAILURE);
-    }
-
-    fprintf(stderr, "%s [INFO] \t ", args->prog_name);
-    l2boost_step_dump_head(stderr);
-    
-    /* skip a header line */
-    fgets(buf, BUF_SIZE, fp);
-
-    m = 0;
-    while(fgets(buf, BUF_SIZE, fp) && m <= model_len){
-      /* parse the input line */
-      sscanf(buf, "%d\t%ld\t%s\t%s\t%s\t%s", 
-	     &iter, &axis, gamma_str, residuals_str,
-	     step_t, total_t);
-
-      if(iter != m){
+  if(file != NULL){
+    /* read from a file */
+    {
+      FILE *fp;
+      char buf[BUF_SIZE];
+      char gamma_str[BUF_SIZE], residuals_str[BUF_SIZE];
+      char step_t[BUF_SIZE], total_t[BUF_SIZE];
+      unsigned int iter;
+      unsigned long axis;
+      unsigned int m, model_len;
+      
+      model_len = mywc(file) - 2;
+      
+      if(model_len >= iternum){
 	fprintf(stderr, "%s [ERROR] ", args->prog_name);
-	fprintf(stderr, "iteration step %d is missing\n", m);
+	fprintf(stderr, "iternum (%d) is smaller than saved file (%d)\n",
+		iternum, model_len);
 	exit(EXIT_FAILURE);
       }
       
-      (*model)->beta[axis] += strtod(gamma_str, NULL);
-      (*model)->res_sq[m] = strtod(residuals_str, NULL);      
-
-      l2boost_step_dump(*model, m, axis, 
-			strtod(gamma_str, NULL), 0, 0,
-			fp_out);
+      fprintf(stderr, "%s [INFO] ", args->prog_name);
+      fprintf(stderr, "start reading model from %s\n", file);
+      
+      if((fp = fopen(file, "r")) == NULL){
+	fprintf(stderr, "error: fopen %s\n%s\n",
+		file, strerror(errno));
+	exit(EXIT_FAILURE);
+      }
+      
       fprintf(stderr, "%s [INFO] \t ", args->prog_name);
-      l2boost_step_dump(*model, m, axis, 
-			strtod(gamma_str, NULL), 0, 0,
-			stderr);
-
-
-      (*model)->nextiter = ++m;      
+      l2boost_step_dump_head(stderr);
+      
+      /* skip a header line */
+      fgets(buf, BUF_SIZE, fp);
+      
+      m = 0;
+      while(fgets(buf, BUF_SIZE, fp) && m <= model_len){
+	/* parse the input line */
+	sscanf(buf, "%d\t%ld\t%s\t%s\t%s\t%s", 
+	       &iter, &axis, gamma_str, residuals_str,
+	       step_t, total_t);
+	
+	if(iter != m){
+	  fprintf(stderr, "%s [ERROR] ", args->prog_name);
+	  fprintf(stderr, "iteration step %d is missing\n", m);
+	  exit(EXIT_FAILURE);
+	}
+	
+	(*model)->beta[axis] += strtod(gamma_str, NULL);
+	(*model)->res_sq[m] = strtod(residuals_str, NULL);      
+	
+	l2boost_step_dump(*model, m, axis, 
+			  strtod(gamma_str, NULL), 0, 0,
+			  fp_out);
+	fprintf(stderr, "%s [INFO] \t ", args->prog_name);
+	l2boost_step_dump(*model, m, axis, 
+			  strtod(gamma_str, NULL), 0, 0,
+			  stderr);
+	
+	
+	(*model)->nextiter = ++m;      
+      }
+      
+      fclose(fp);
+      
+      fprintf(stderr, "%s [INFO] ", args->prog_name);
+      fprintf(stderr, "%d iterations has loaded from file\n", m - 1);
     }
-  
-    fclose(fp);
-
-    fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "%d iterations has loaded from file\n", m - 1);
   }
-
   return 0;
 }
+
 			  
 int l2boost_train(const cmd_args *args,
 		  const double **feature,
