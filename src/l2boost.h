@@ -726,16 +726,7 @@ int ada_train(const cmd_args *args,
     cmpUdX_args *params;
     pthread_t *threads;
 
-#if 0
-    {
-      unsigned int tmp;
-      for(tmp = 0; tmp < p; tmp++){
-	fprintf(stderr, "%e\t", Xnormsq[tmp]);
-      }
-      fprintf(stderr, "\n");
-    }
-#endif
-
+    gettimeofday(&time, NULL);
     cpTimeval(time, &time_prev);
     cpTimeval(time, &time_start);
 #if 1
