@@ -63,6 +63,7 @@ int boost_step_dump(const boost *model,
 		    FILE *fp);
 int boost_init(const cmd_args *args,
 	       const canonical_kp *ckps,
+	       const kmer *kmers,
 	       const unsigned int iternum,
 	       const char *file,
 	       boost **model,
@@ -206,11 +207,21 @@ int boost_step_dump(const boost *model,
 
 int boost_init(const cmd_args *args,
 	       const canonical_kp *ckps,
+	       const kmer *kmers,
 	       const unsigned int iternum,
 	       const char *file,
 	       boost **model,
 	       FILE *fp_out){  
-  const unsigned long p = ckps->num;
+  unsigned long p;
+  if(ckps != NULL){
+    p = ckps->num;
+  }else if(kmers != NULL){
+    p = kmers->num;
+  }else{
+    fprintf(stderr, "%s [ERROR] ", args->prog_name);
+    fprintf(stderr, "ckps and kmers are NULL\n");
+    exit(EXIT_FAILURE);   
+  }
 
   /* allocate memory */
   {
@@ -679,7 +690,7 @@ int ada_train(const cmd_args *args,
   
     ((*model)->res_sq)[(*model)->nextiter - 1] = 0.5 * err / n;
   }
-
+  
   /* If we load some model from a file, update residuals */
   if(((*model)->nextiter) > 1){
     fprintf(stderr, "%s [INFO] ", args->prog_name);
@@ -698,7 +709,6 @@ int ada_train(const cmd_args *args,
     }
   }
 
-#if 0
   if(thread_num >= 1){
     int t = 0;
     cmpUdX_args *params;
@@ -714,10 +724,10 @@ int ada_train(const cmd_args *args,
 
       /* prepare for thread programming */
       boost_pthread_prep(thread_num, n, p, 
-		   feature, data, ckps, 
-		   U, UdX, Xnormsq, 
-		   &params, &threads);
-		   
+			 feature, data, NULL, kmers,
+			 beta_x, UdX, Xnormsq, 
+			 &params, &threads);
+      
       for(t = 0; t < thread_num; t++){
 	pthread_create(&threads[t], NULL, 
 		       boost_cmpXnormsq, (void*)&params[t]);		       
@@ -743,15 +753,15 @@ int ada_train(const cmd_args *args,
 
     cpTimeval(time, &time_prev);
     cpTimeval(time, &time_start);
-    
+#if 1
     for(m = (*model)->nextiter; m <= (*model)->iternum; m++){
       /* compute inner product $U \cdot X^{(j)}$ */
       {
 	/* prepare for thread programming */
 	boost_pthread_prep(thread_num, n, p, 
-		     feature, data, ckps,
-		     U, UdX, Xnormsq, 
-		     &params, &threads);
+			   feature, data, NULL, kmers,
+			   beta_x, UdX, Xnormsq, 
+			   &params, &threads);
 		   
 	for(t = 0; t < thread_num; t++){
 	  pthread_create(&threads[t], NULL, 
@@ -767,38 +777,40 @@ int ada_train(const cmd_args *args,
       gamma = UdX[s] / Xnormsq[s];
       
       ((*model)->beta)[s] += v * gamma;
-
+#if 1
       /* Update U[] and sum of residual square */
-      ada_update_beta_x(U, (*model)->res_sq, 
+      ada_update_beta_x(beta_x, (*model)->res_sq, 
 			(const unsigned int)m, n, s, 
-			feature, data, ckps,
+			feature, data, kmers,
 			(const double)gamma, v);
       
       gettimeofday(&time, NULL);
       boost_step_dump(*model,
-			(const unsigned int)m, 
-			(const unsigned long)s,
-			v * (const double)gamma,
-			(const double)diffSec(time_prev, time),
-			(const double)diffSec(time_start, time),
-			fp);
+		      (const unsigned int)m, 
+		      (const unsigned long)s,
+		      v * (const double)gamma,
+		      (const double)diffSec(time_prev, time),
+		      (const double)diffSec(time_start, time),
+		      fp);
       fprintf(stderr, "%s [INFO] \t ", args->prog_name);
       boost_step_dump(*model,
-			(const unsigned int)m, 
-			(const unsigned long)s,
-			v * (const double)gamma,
-			(const double)diffSec(time_prev, time),
-			(const double)diffSec(time_start, time),
-			stderr);
+		      (const unsigned int)m, 
+		      (const unsigned long)s,
+		      v * (const double)gamma,
+		      (const double)diffSec(time_prev, time),
+		      (const double)diffSec(time_start, time),
+		      stderr);
       cpTimeval(time, &time_prev);
+#endif
     }
 
+#endif
   }
 
   {
     boost_dump_beta((const boost *)*model, p);
   }
-#endif
+
   return 0;
 }
 

@@ -34,11 +34,12 @@ int main(int argc, char **argv){
 
 
     boost_init((const cmd_args *)args,
-		 (const canonical_kp *)ckps,	       
-		 (const unsigned int)args->iter1,
-		 (const char *)args->pri_file,
-		 &model,
-		 fp_out);      
+	       (const canonical_kp *)ckps,	       
+	       NULL,
+	       (const unsigned int)args->iter1,
+	       (const char *)args->pri_file,
+	       &model,
+	       fp_out);      
 
     l2_train((const cmd_args *)args,		
 		  (const double **)features,

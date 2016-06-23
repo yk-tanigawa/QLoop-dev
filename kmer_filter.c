@@ -23,8 +23,8 @@ int main(int argc, char **argv){
     kmer_read((const cmd_args *)args, &kmers);
   }
 
-#if 0
-  l2boost *model;
+#if 1
+  boost *model;
   {
     FILE *fp_out;
     if((fp_out = fopen(args->out_file, "w")) == NULL){
@@ -32,30 +32,22 @@ int main(int argc, char **argv){
 	      args->out_file, strerror(errno));
       exit(EXIT_FAILURE);
     }
-    l2_step_dump_head(fp_out);
-    fprintf(fp_out, "%d\t%ld\t%e\t%e\t%f\t%f\n",
-	    0, (long int)0, 0.0, 1.0, 0.0, 0.0);
 
-    if(args->pri_file != NULL){
-      l2_load((const cmd_args *)args,
-		   (const canonical_kp *)ckps,	       
-		   (const unsigned int)args->iter1,
-		   (const char *)args->pri_file,
-		   &model,
-		   fp_out);      
-    }else{
-      boost_init((const canonical_kp *)ckps,	       
-		   (const unsigned int)args->iter1,
-		   &model);
-    }
+    boost_init((const cmd_args *)args,
+	       NULL,
+	       (const kmer *)kmers,	       
+	       (const unsigned int)args->iter1,
+	       (const char *)args->pri_file,
+	       &model,
+	       fp_out);      
 
-    l2_train((const cmd_args *)args,		
-		  (const double **)features,
-		  (const hic *)data,
-		  (const canonical_kp *)ckps,
-		  (const double)args->acc,
-		  &model,
-		  fp_out);
+    ada_train((const cmd_args *)args,		
+	      (const double **)features,
+	      (const hic *)data,
+	      (const kmer *)kmers,
+	      (const double)args->acc,
+	      &model,
+	      fp_out);
 
     fclose(fp_out);
 

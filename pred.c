@@ -30,11 +30,12 @@ int main(int argc, char **argv){
   {
 
     boost_init((const cmd_args *)args,
-		 (const canonical_kp *)ckps,	   
-		 (const unsigned int)mywc(args->pri_file),
-		 (const char *)args->pri_file,
-		 &model,
-		 stderr);      
+	       (const canonical_kp *)ckps,	   
+	       NULL,
+	       (const unsigned int)mywc(args->pri_file),
+	       (const char *)args->pri_file,
+	       &model,
+	       stderr);      
 
     predict((const cmd_args *)args,		
 	    (const double **)features,
