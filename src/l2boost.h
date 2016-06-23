@@ -709,37 +709,22 @@ int ada_train(const cmd_args *args,
     }
   }
 
+  /* prepare Xnormsq ||X^{(j)}||^2 */
+  {
+    unsigned long j;
+    for(j = 0; j < p; j++){
+      Xnormsq[j] = 2.0 * n;
+    }
+
+    fprintf(stderr, "%s [INFO] ", args->prog_name);
+    fprintf(stderr, "Xnormsq[] is uniform\n");
+  }
+
+#if 1
   if(thread_num >= 1){
     int t = 0;
     cmpUdX_args *params;
     pthread_t *threads;
-
-    fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "start computation of Xnormsq with %d threads\n",
-	    thread_num);
-
-    /* compute Xnormsq ||X^{(j)}||^2 */
-    {
-      gettimeofday(&time_prev, NULL);
-
-      /* prepare for thread programming */
-      boost_pthread_prep(thread_num, n, p, 
-			 feature, data, NULL, kmers,
-			 beta_x, UdX, Xnormsq, 
-			 &params, &threads);
-      
-      for(t = 0; t < thread_num; t++){
-	pthread_create(&threads[t], NULL, 
-		       boost_cmpXnormsq, (void*)&params[t]);		       
-      } 
-      for(t = 0; t < thread_num; t++){
-	pthread_join(threads[t], NULL);
-      }
-      gettimeofday(&time, NULL);
-    }
-
-    fprintf(stderr, "%s [INFO] ", args->prog_name);
-    fprintf(stderr, "Xnormsq finished in %f sec.\n", diffSec(time_prev, time));
 
 #if 0
     {
@@ -807,6 +792,7 @@ int ada_train(const cmd_args *args,
 #endif
   }
 
+#endif
   {
     boost_dump_beta((const boost *)*model, p);
   }

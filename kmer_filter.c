@@ -23,7 +23,7 @@ int main(int argc, char **argv){
     kmer_read((const cmd_args *)args, &kmers);
   }
 
-#if 1
+
   boost *model;
   {
     FILE *fp_out;
@@ -52,6 +52,6 @@ int main(int argc, char **argv){
     fclose(fp_out);
 
   }
-#endif
+
   return 0;
 }
