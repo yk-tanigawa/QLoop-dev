@@ -1,0 +1,11 @@
+//
+// Created by yosuke on 7/21/16.
+//
+
+#ifndef QLOOP_CONFIG_H
+#define QLOOP_CONFIG_H
+
+#define VERSION_MAJOR @VERSION_MAJOR@
+#define VERSION_MINOR @VERSION_MINOR@
+
+#endif //QLOOP_CONFIG_H

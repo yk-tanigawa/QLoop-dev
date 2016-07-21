@@ -5,3 +5,6 @@ a.out
 data
 data/*
 */__pycache__/*
+
+bin/*
+!.gitkeep
